@@ -134,6 +134,11 @@ p{margin:0}
 .proposal{border:1px solid #9ccfcd;background:var(--teal-soft);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;font-size:14.5px}
 .diff{font:12.5px/1.55 var(--mono);display:flex;flex-direction:column;gap:2px}
 .diff .m{color:#9b1c1c} .diff .p{color:#11612b}
+.shacl{border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.shacl summary{cursor:pointer;padding:8px 10px;font-weight:600;font-size:14.5px;color:var(--navy-2)}
+.shacl pre{margin:0 10px 8px;background:var(--navy);color:#dbe6f5;border-radius:6px;padding:10px 12px;overflow-x:auto;font:12px/1.55 var(--mono);white-space:pre}
+.shacl pre .c{color:#8ea3c0}
+.shacl .hint{padding:0 10px 10px}
 .note{font-size:14px;color:var(--ink-2);background:var(--surface-2);border-left:3px solid var(--teal);padding:7px 10px;border-radius:0 6px 6px 0}
 .note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--ink-2)}
@@ -207,10 +212,40 @@ p{margin:0}
       </section>
 
       <section class="step">
-        <h2><span>4</span>Check it</h2>
-        <p>Three rules, like a building code review for the graph.</p>
-        <div class="btns"><button class="btn primary" type="button" id="check">Check the graph</button></div>
+        <h2><span>4</span>Check it: SHACL validation</h2>
+        <p>SHACL is the standard way to write rules for a graph, like a building code review. Here are three rules for FCU-6F-10. Press the button to test the graph against them.</p>
+        <div class="btns"><button class="btn primary" type="button" id="check">Validate the graph</button></div>
         <ul class="checks" id="checks" hidden></ul>
+        <details class="shacl"><summary>See the three rules written in SHACL</summary>
+<pre><span class="c"># Rule 1: every fan coil unit has a return air temperature point</span>
+ex:R1-FCU-RAT  a sh:NodeShape ;
+  sh:targetClass  brick:FCU ;
+  sh:property [
+    sh:path  brick:hasPoint ;
+    sh:qualifiedValueShape  [ sh:class brick:Return_Air_Temperature_Sensor ] ;
+    sh:qualifiedMinCount  1 ;
+    sh:message  "FCU lacks a return air temperature point" ] .
+
+<span class="c"># Rule 2: every fan coil unit is installed somewhere</span>
+ex:R2-FCU-Room  a sh:NodeShape ;
+  sh:targetClass  brick:FCU ;
+  sh:property [
+    sh:path  rec:locatedIn ;
+    sh:minCount  1 ;
+    sh:message  "Equipment has no installed location" ] .
+
+<span class="c"># Rule 3: the zone it supplies contains its room</span>
+ex:R3-FCU-ZoneRoom  a sh:NodeShape ;
+  sh:targetClass  brick:FCU ;
+  sh:sparql [
+    sh:message  "Supplied zone does not contain the installed room" ;
+    sh:select  """
+      SELECT $this WHERE {
+        $this brick:feeds ?zone ; rec:locatedIn ?room .
+        FILTER NOT EXISTS { ?zone brick:hasPart ?room }
+      }""" ] .</pre>
+          <p class="hint">Example shapes for learning. In the real project these run in pySHACL with the Brick 1.4.4 ontology. This page runs the same three checks in JavaScript, so you can try them without installing anything.</p>
+        </details>
       </section>
 
       <section class="step">
@@ -508,7 +543,7 @@ const IDEAS = [
   ['Brick and REC', 'Shared dictionaries, like drawing legends everyone agrees on. Brick names equipment and points (Brick 1.4.4); RealEstateCore names spaces such as offices and HVAC zones.'],
   ['Point', 'Where equipment talks: a sensor reports (eyes), a command acts (hands), a setpoint is a target, a status is an indicator light. Points come from the I/O on control drawings.'],
   ['Provenance', 'Where a fact came from and how sure it is. The model FC-8 is inferred from room size, so it is labelled inferred, not drawn.'],
-  ['Validation', 'Rules (written in SHACL in the real project) check the graph automatically, like a building code review. The real baseline passes every Brick 1.4.4 rule.'],
+  ['SHACL validation', 'Rules written in SHACL check the graph automatically, like a building code review, and name the node that breaks a rule. The real baseline passes every Brick 1.4.4 rule. Try it in step 4.'],
   ['Repair with checks', 'In the SGR research a language model proposes a fix, the rules check it, and it tries again if it fails. A clean baseline graph is the answer key used to score repairs.'],
 ];
 $('#ideas').innerHTML = IDEAS.map(([t, d], i) => `<details><summary><span>${String(i + 1).padStart(2, '0')}</span>${t}</summary><p>${d}</p></details>`).join('');

@@ -1,24 +1,22 @@
 # 6F Knowledge Graph Lab
 
-An educational website about turning as-built drawings into a knowledge graph, based on
+A one-page educational simulation of how as-built drawings become a knowledge graph, based on
 *From As-Built Drawings to a Knowledge Graph: An Introduction to the 6F Baseline Graph*
 (Chien-Pu Huang, Oct 25, 2026).
 
-Pages: Home · The story · Lab · Learn · About & sources (one file, linked with `#home`, `#story`, `#lab`, `#learn`, `#about`).
+Live site: https://finansiapurba-cae.github.io/6f-knowledge-graph-lab/
+
+## What you can do
+
+1. Explore the graph around fan coil unit FCU-6F-10 and see where each fact came from (drawn, inferred, illustrative).
+2. Trip chiller CH-1 and follow the arrows to the rooms it serves.
+3. Break the graph the way real handover mistakes do.
+4. Check it with three rules.
+5. Approve or reject evidence-based repairs.
+6. See why passing the rules is not proof that the graph matches the building.
 
 ## Files
 
-- `index.html` – the complete website. Self-contained: no build step, no server code, no API key.
-- `lab.html` – the same site written as the source for the claude.ai artifact (no `<html>`/`<head>` wrapper).
+- `index.html`: the whole website in one file. No build step, no server, no API key.
 
-## Put it online
-
-Any static host works because the site is a single HTML file.
-
-**Netlify Drop (fastest, no account setup beyond sign-in):** open https://app.netlify.com/drop and drag this folder onto the page. You get a public URL straight away.
-
-**GitHub Pages:** create a repository, add `index.html`, then in *Settings → Pages* choose “Deploy from a branch”, branch `main`, folder `/ (root)`. The site appears at `https://<your-user>.github.io/<repo>/`.
-
-**Open locally:** double-click `index.html`.
-
-Fonts load from Google Fonts; everything else is inline. Without internet the page still works with system fonts.
+It is an educational simulation of graph data only: it does not calculate temperatures or control equipment, and it is not the full 6F graph or the real floor plan.

@@ -3,24 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>6F Knowledge Graph Lab</title>
-<meta name="description" content="A simple educational simulation of the 6F baseline graph: explore FCU-6F-10, trip a chiller, break the graph, check it, and repair it.">
+<title>Symbolic-Guided Regeneration (SGR)</title>
+<meta name="description" content="Website for the SGR journal paper: the chiller-trip story, a hands-on validation and repair demo on one fan coil unit, the SGR patch loop, the 6F baseline graph used as the answer key, evaluation design and data availability.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
 <style>
-/* Layout: one page. A sticky graph on the left, six short steps on the right,
-   then "learn the ideas" and sources below. Light theme only (navy + teal). */
+/* Layout: one page that tells the story first (the chiller question, the gaps in
+   as-built drawings), lets readers try validation and repair on one unit, then
+   presents the SGR loop, the answer key, pipeline, evaluation and availability.
+   Light theme only, navy + teal. */
 :root{
   color-scheme: light;
   --bg:#f3f6f9; --surface:#ffffff; --surface-2:#f7f9fb; --line:#d7dfe8; --line-2:#b8c5d3;
   --ink:#0f1f3a; --ink-2:#34445e; --muted:#56667d;
   --navy:#13294b; --navy-2:#1f3f6e; --navy-soft:#e7edf6;
   --teal:#0b7473; --teal-2:#085d5c; --teal-soft:#dff1f0;
-  --c-equip:#1f4e8c; --c-equip-soft:#e4ecf7;
-  --c-ctrl:#0b7473;  --c-ctrl-soft:#dcf0ef;
-  --c-space:#9a5300; --c-space-soft:#fbeedd;
-  --c-zone:#2a6fab;  --c-zone-soft:#e3f0fa;
+  --c-equip:#1f4e8c; --c-equip-soft:#e4ecf7; --c-ctrl:#0b7473; --c-ctrl-soft:#dcf0ef;
+  --c-space:#9a5300; --c-space-soft:#fbeedd; --c-zone:#2a6fab; --c-zone-soft:#e3f0fa;
   --c-point:#6a4fb3; --c-point-soft:#efeafa;
   --ok:#17803a; --ok-soft:#e5f4ea; --bad:#c42727; --bad-soft:#fdecec;
   --warn:#9a5600; --warn-soft:#fff3df; --amber:#e29400; --amber-soft:#fff2d6;
@@ -29,21 +29,117 @@
 }
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
 @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}*{transition:none!important}}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 var(--font);-webkit-font-smoothing:antialiased}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
-.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 var(--font);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--navy)}
+.gutter{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1120px;margin:0 auto}
 h1,h2,h3{text-wrap:balance;margin:0;color:var(--navy)}
 p{margin:0}
 :focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-.mono{font-family:var(--mono)}
+code,.mono{font-family:var(--mono);font-size:.9em}
+code{background:var(--navy-soft);border-radius:4px;padding:1px 5px}
 
-/* header */
-.head{padding-block:30px 22px;display:flex;flex-direction:column;gap:10px}
-.badge{align-self:flex-start;font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--teal-2);background:var(--teal-soft);border:1px solid #9ccfcd;border-radius:999px;padding:3px 10px}
-.head h1{font-size:clamp(30px,4.4vw,46px);line-height:1.08;letter-spacing:-.01em}
-.head p{font-size:18px;color:var(--ink-2);max-width:68ch}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--navy);color:#fff}
+.bar .wrap{display:flex;align-items:center;gap:6px 18px;min-height:50px;flex-wrap:wrap;max-width:1100px}
+.bar b{font-size:16px;white-space:nowrap}
+.bar nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;justify-content:flex-end;min-width:0}
+.bar nav::-webkit-scrollbar{display:none}
+.bar nav a{color:#c7d3e6;text-decoration:none;font-size:13.5px;padding:6px 10px;border-radius:6px;white-space:nowrap}
+.bar nav a:hover{background:#1d3a66;color:#fff}
+@media (max-width:720px){.bar nav{flex:1 0 100%;justify-content:flex-start}}
+
+.head{padding-block:34px 20px;display:flex;flex-direction:column;gap:10px}
+.eyebrow{font:600 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--teal-2)}
+.head h1{font-size:clamp(30px,4.6vw,46px);line-height:1.08;letter-spacing:-.01em}
+.head .q{font-size:clamp(18px,2vw,21px);color:var(--navy);font-weight:500;max-width:56ch}
+.head .lead{font-size:17px;color:var(--ink-2);max-width:66ch}
+.pending{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;background:var(--warn-soft);border:1px solid #ecc88f;border-radius:10px;padding:10px 14px;font-size:14.5px;max-width:72ch}
+.pending b.i{font:700 14px var(--mono);color:var(--warn)}
+
+.sec{padding-block:34px;border-top:1px solid var(--line)}
+.sec > h2{font-size:clamp(23px,3vw,28px);line-height:1.2;margin-bottom:8px}
+.sec > .sub{font-size:17px;color:var(--ink-2);max-width:68ch;margin-bottom:16px}
+.sec h3{font-size:17px;margin:22px 0 8px}
+.sec p{max-width:70ch;margin-bottom:10px}
+.sec ul{max-width:68ch;padding-left:22px;margin:0 0 12px}
+.sec li{margin-bottom:6px}
+.points{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:4px 0 18px}
+@media (max-width:720px){.points{grid-template-columns:1fr}}
+.points div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14.5px;line-height:1.55}
+.points b{display:block;color:var(--navy);margin-bottom:2px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:6px 0 18px}
+@media (max-width:820px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stats div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.stats b{font-size:24px;line-height:1.15;color:var(--navy);font-variant-numeric:tabular-nums}
+.stats span{font-size:13px;color:var(--muted)}
+.tblwrap{overflow-x:auto;margin:6px 0 16px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.5}
+th,td{border-bottom:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{background:var(--navy-soft);font-weight:600;font-size:13.5px;color:var(--navy)}
+.pipe{list-style:none;counter-reset:p;margin:6px 0 16px;padding:0;display:flex;flex-direction:column;gap:0}
+.pipe li{counter-increment:p;display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;position:relative;padding-bottom:14px}
+.pipe li::before{content:counter(p);display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--navy-2);color:#fff;font:600 13px var(--mono);z-index:1}
+.pipe li::after{content:"";position:absolute;left:14px;top:30px;bottom:0;width:2px;background:var(--line-2)}
+.pipe li:last-child::after{display:none}
+.pipe li b{display:block;color:var(--navy)}
+.pipe li span{font-size:14.5px;color:var(--ink-2)}
+.pipe li.loop::before{background:var(--teal)}
+
+/* simulator */
+.sim{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin:6px 0 18px;overflow:hidden}
+.sim-h{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+.lbl{font-size:13px;color:var(--muted);font-weight:600}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:7px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;background:var(--surface);padding:6px 11px;font:500 13.5px var(--font);cursor:pointer;color:var(--ink-2)}
+.seg button+button{border-left:1px solid var(--line-2)}
+.seg button[aria-pressed="true"]{background:var(--navy-2);color:#fff}
+.sim select{font:inherit;font-size:14px;border:1px solid var(--line-2);border-radius:6px;padding:5px 8px;background:var(--surface)}
+.ctl{display:flex;gap:6px;flex-wrap:wrap}
+.diagram{overflow-x:auto;padding:10px 8px 4px}
+.diagram svg{display:block;width:100%;min-width:640px;height:auto}
+.fn rect,.fn path{fill:var(--surface);stroke:#a9b6c6;stroke-width:1.4;transition:fill .25s,stroke .25s}
+.fn text{font:500 13px var(--font);fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.fn text.s{font-size:11px;fill:var(--muted)}
+.fn.final rect{fill:#e6f0fb;stroke:#2f6db5;stroke-width:2}
+.fn.on rect,.fn.on path{fill:var(--amber-soft);stroke:var(--amber);stroke-width:3}
+.fn.done rect,.fn.done path{stroke:var(--navy-2);stroke-width:1.8}
+.fn.end-ok rect{fill:var(--ok-soft);stroke:var(--ok);stroke-width:3}
+.fn.end-bad rect{fill:var(--warn-soft);stroke:var(--warn);stroke-width:3}
+.fe{fill:none;stroke:#b4bfcc;stroke-width:1.6;transition:stroke .25s}
+.fe.on{stroke:var(--amber);stroke-width:3.2}
+.fe.done{stroke:var(--navy-2);stroke-width:2}
+.fl{font:500 11.5px var(--font);fill:var(--muted)}
+.sim-b{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border-top:1px solid var(--line)}
+@media (max-width:760px){.sim-b{grid-template-columns:1fr}}
+.sim-b > div{padding:12px 14px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.sim-b > div + div{border-left:1px solid var(--line)}
+@media (max-width:760px){.sim-b > div + div{border-left:0;border-top:1px solid var(--line)}}
+.sim-b h3{font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0}
+.status{display:flex;flex-wrap:wrap;gap:6px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;border-radius:999px;padding:2px 10px;border:1px solid}
+.pill.idle{background:var(--surface-2);color:var(--muted);border-color:#c3ccd7}
+.pill.ok{background:var(--ok-soft);color:#11612b;border-color:#a8d5b6}
+.pill.bad{background:var(--bad-soft);color:#9b1c1c;border-color:#eab1b1}
+.pill.warn{background:var(--warn-soft);color:#7a4500;border-color:#ecc88f}
+.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:14px;max-height:250px;overflow:auto}
+.log li{display:grid;grid-template-columns:26px minmax(0,1fr);gap:6px;padding:4px 6px;border-radius:5px}
+.log li i{font:600 11.5px var(--mono);font-style:normal;color:var(--muted)}
+.log li.cur{background:var(--amber-soft)}
+.fb{font:12.5px/1.55 var(--mono);background:var(--bad-soft);border:1px solid #eab1b1;border-radius:6px;padding:8px 10px;color:#7d1717;word-break:break-word}
+.fb.okk{background:var(--ok-soft);border-color:#a8d5b6;color:#11612b}
+pre{margin:0;background:var(--navy);color:#dbe6f5;border-radius:8px;padding:10px 12px;overflow:auto;font:12px/1.55 var(--mono);white-space:pre;max-height:250px}
+.sim-note{font-size:13px;color:var(--muted);padding:10px 14px;border-top:1px solid var(--line);background:var(--surface-2)}
+.sec .sim-note{max-width:none;margin:0}
+
+.foot{border-top:1px solid var(--line);padding-block:20px 34px;font-size:13.5px;color:var(--muted)}
+.foot p{max-width:84ch;margin-bottom:6px}
+
+.sim,.tblwrap,.stats,.points,.pipe{max-width:980px}
+
+/* ---- story + one-unit lab ---- */
 .versus{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
 .versus div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:15px;flex:1 1 280px}
 .versus b{display:block;color:var(--navy)}
@@ -52,7 +148,7 @@ p{margin:0}
 /* lab */
 .lab{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:20px;align-items:start;padding-bottom:30px}
 @media (max-width:900px){.lab{grid-template-columns:1fr}}
-.stage{position:sticky;top:calc(12px + env(safe-area-inset-top,0px));background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.stage{position:sticky;top:calc(62px + env(safe-area-inset-top,0px));background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 @media (max-width:900px){.stage{position:static}}
 .stage-h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--muted);flex-wrap:wrap}
 .stage-h b{color:var(--navy);font-size:14px}
@@ -100,11 +196,11 @@ p{margin:0}
 .bdg text{font:700 10px var(--font);fill:#fff;text-anchor:middle;dominant-baseline:central}
 
 /* steps */
-.steps{display:flex;flex-direction:column;gap:12px}
-.step{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
-.step h2{font-size:18px;display:flex;gap:10px;align-items:baseline}
-.step h2 span{font:600 13px var(--mono);color:var(--teal-2)}
-.step p{font-size:15px;color:var(--ink-2)}
+.csteps{display:flex;flex-direction:column;gap:12px}
+.cstep{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.cstep h2{font-size:18px;display:flex;gap:10px;align-items:baseline}
+.cstep h2 span{font:600 13px var(--mono);color:var(--teal-2)}
+.cstep p{font-size:15px;color:var(--ink-2)}
 .btns{display:flex;flex-wrap:wrap;gap:8px}
 .btn{font:600 14.5px var(--font);border:1px solid var(--line-2);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 14px;cursor:pointer;text-align:left;line-height:1.3}
 .btn:hover{border-color:var(--navy-2)}
@@ -144,66 +240,101 @@ p{margin:0}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--ink-2)}
 .legend span{display:inline-flex;align-items:center;gap:5px}
 
-/* learn + sources */
-.sec{padding-block:26px;border-top:1px solid var(--line)}
-.sec > h2{font-size:24px;margin-bottom:6px}
-.sec > p{color:var(--ink-2);max-width:72ch;margin-bottom:14px}
-.ideas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-@media (max-width:760px){.ideas{grid-template-columns:1fr}}
-.ideas details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
-.ideas summary{cursor:pointer;font-weight:600;color:var(--navy);list-style-position:outside}
-.ideas summary span{font:600 12px var(--mono);color:var(--teal-2);margin-right:6px}
-.ideas details p{margin-top:8px;font-size:15px;color:var(--ink-2)}
-.nums{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-@media (max-width:760px){.nums{grid-template-columns:1fr}}
-.nums div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14.5px}
-.nums h3{font-size:15px;margin-bottom:6px}
-.nums ul{margin:0;padding-left:18px}
-.foot{padding-block:18px 32px;font-size:13.5px;color:var(--muted);border-top:1px solid var(--line)}
-.foot p{max-width:90ch;margin-bottom:6px}
+
+.versus{max-width:980px;margin:8px 0 16px}
+.gaps{list-style:none;padding:0!important;margin:6px 0 14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-width:980px!important}
+@media (max-width:760px){.gaps{grid-template-columns:1fr}}
+.gaps li{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14.5px;margin:0!important}
+.gaps li b{display:block;color:var(--navy)}
+.bridge{font-size:17px;color:var(--navy);font-weight:500;max-width:68ch;border-left:4px solid var(--teal);padding:4px 0 4px 14px;margin:6px 0 4px}
+.lab{margin-top:6px}
+.sec .facts,.sec .checks{padding:0;margin:0;max-width:none}
+.sec .facts li,.sec .checks li{margin:0}
+.sec .info h3{margin:0}
+.sec .cstep p{margin:0}
 </style>
 
 </head>
 <body>
-<div class="wrap">
+<div class="bar gutter">
+  <div class="wrap">
+    <b>SGR</b>
+    <nav aria-label="Sections">
+      <a href="#story">Story</a>
+      <a href="#try">Try it</a>
+      <a href="#loop">The loop</a>
+      <a href="#answer-key">Answer key</a>
+      <a href="#pipeline">Pipeline</a>
+      <a href="#evaluation">Evaluation</a>
+      <a href="#availability">Data and code</a>
+    </nav>
+  </div>
+</div>
+
+<main class="wrap gutter">
   <header class="head">
-    <span class="badge">Educational knowledge-graph simulation</span>
-    <h1>6F Knowledge Graph Lab</h1>
-    <p>How the as-built drawings of a research building’s sixth floor become a knowledge graph a computer can reason over, shown with one fan coil unit, FCU-6F-10.</p>
-    <div class="versus">
-      <div><b>With drawings: half a day</b>A chiller trips. To find which rooms get hot, staff flip through four sheets: schedule, flow diagram, HVAC plan, architectural plan.</div>
-      <div class="g"><b>With a knowledge graph: one query</b>The computer follows the arrows: chiller → fan coil units → HVAC zones → rooms. On the full 6F graph that takes under a second.</div>
-    </div>
+    <span class="eyebrow">Companion page · SGR journal paper</span>
+    <h1>SGR: Symbolic-Guided Regeneration</h1>
+    <p class="q">When a large language model repairs or updates a building’s knowledge graph, how do we make sure it does not make things up?</p>
+    <p class="lead">SGR lets the model propose a patch, checks the patched graph against SHACL rules, and feeds every violation back to the model until the graph passes or a reviewer takes over. Every accepted change is recorded with its provenance. The method is evaluated on a clean, fully traced baseline graph of a real building’s HVAC system.</p>
+    <div class="pending"><b class="i">!</b><span><b>Paper details not added yet.</b> The paper’s title, authors, abstract, results and citation will be added from the paper itself. This page reports no experimental results.</span></div>
   </header>
 
-  <main class="lab">
+
+  <!-- STORY -->
+  <section class="sec" id="story">
+    <h2>One building, one question</h2>
+    <p class="sub">On a summer afternoon one of the chillers on the roof of a research building trips. Facility staff need to know which rooms will get hot, and whom to notify.</p>
+    <div class="versus">
+      <div><b>With drawings: half a day</b>Flip through four sheets: the equipment schedule, the system flow diagram, then the HVAC plan and the architectural plan for each floor. The sixth floor alone has 18 fan coil units, and it is easy to miss one.</div>
+      <div class="g"><b>With a knowledge graph: one query</b>The computer follows the arrows: chiller → fan coil units → HVAC zones → rooms. On the 6F graph that returns 13 rooms in under a second: 7 faculty offices, 2 graduate student rooms, 2 academic exchange rooms, 1 laboratory and a lounge. The data room has its own cooling system.</div>
+    </div>
+    <p class="bridge">That answer is only as good as the graph.</p>
+    <h3>Drawings are made to build a building, not to run one</h3>
+    <p>Rebuilding the 6F graph from official as-built drawings exposed gaps that are typical of a handover:</p>
+    <ul class="gaps">
+      <li><b>No room names on the HVAC drawings</b>Equipment and spaces had to be linked by aligning another drawing by coordinates.</li>
+      <li><b>No point names or addresses</b>Control drawings give I/O counts, so we know “there is a temperature” but not where to read it.</li>
+      <li><b>Unclear scope</b>A “not in this project” remark in the equipment schedule sits between two rows.</li>
+      <li><b>Copied templates</b>The title block of the master index contains text from another project.</li>
+      <li><b>Mixed periods</b>The renovation was split into phases, so data for the same floor come from different times.</li>
+      <li><b>So errors get in</b>A missing sensor or a wrong arrow sends a query to the wrong room.</li>
+    </ul>
+    <p class="bridge">Large language models can help repair and update a graph like this, but they can also make things up. SGR lets a model propose repairs while symbolic rules decide what is accepted.</p>
+  </section>
+
+  <!-- TRY -->
+  <section class="sec" id="try">
+    <h2>Try it on one unit</h2>
+    <p class="sub">The documented neighbourhood of one fan coil unit, FCU-6F-10. Inject a defect the way a handover would, validate the graph, and repair it.</p>
+  <div class="lab">
     <section class="stage" aria-label="Graph">
-      <div class="stage-h"><b>The graph around FCU-6F-10</b><span>Click any shape · <button class="btn" type="button" id="reset" style="padding:3px 10px;font-size:13px">Reset</button></span></div>
+      <div class="stage-h"><b>The graph around FCU-6F-10</b><span>Click any shape · <button class="btn" type="button" id="unitReset" style="padding:3px 10px;font-size:13px">Reset</button></span></div>
       <div class="gbox"><svg id="g" viewBox="0 0 900 480" role="img" aria-label="Knowledge graph around fan coil unit FCU-6F-10"></svg></div>
       <div class="info" id="info" aria-live="polite"></div>
     </section>
 
-    <div class="steps">
-      <section class="step">
+    <div class="csteps">
+      <section class="cstep">
         <h2><span>1</span>Explore</h2>
         <p>Each shape is a <b>node</b> (one thing) and each arrow is a <b>relationship</b>. Click a node to see its facts and where each fact came from.</p>
         <div class="legend">
           <span><span class="tag drawn">drawn</span> on a drawing</span>
-          <span><span class="tag inferred">inferred</span> deduced, per the PDF</span>
+          <span><span class="tag inferred">inferred</span> deduced, and recorded as such</span>
           <span><span class="tag illus">illustrative</span> added for this demo</span>
         </div>
       </section>
 
-      <section class="step">
+      <section class="cstep">
         <h2><span>2</span>A chiller trips</h2>
-        <p>Follow the arrows from CH-1 to the rooms it serves.</p>
+        <p>Ask the opening question of this small graph: follow the arrows from CH-1 to the rooms it serves.</p>
         <div class="btns"><button class="btn primary" type="button" id="trip">Trip CH-1</button></div>
         <div id="tripOut" hidden></div>
       </section>
 
-      <section class="step">
-        <h2><span>3</span>Break it on purpose</h2>
-        <p>Each button changes the graph the way a real handover mistake would. Watch the red lines.</p>
+      <section class="cstep">
+        <h2><span>3</span>Inject a defect</h2>
+        <p>These are the defect types used to test the rules. Each imitates a real handover mistake. Watch the red lines.</p>
         <div class="btns" id="breaks">
           <button class="btn break" type="button" data-d="D1" aria-pressed="false"><i>✕</i><span><b>Remove the return air temperature point</b><small>The handover data left out a sensor</small></span></button>
           <button class="btn break" type="button" data-d="D2" aria-pressed="false"><i>✕</i><span><b>Remove the room it is installed in</b><small>The equipment list gives no location</small></span></button>
@@ -211,7 +342,7 @@ p{margin:0}
         </div>
       </section>
 
-      <section class="step">
+      <section class="cstep">
         <h2><span>4</span>Check it: SHACL validation</h2>
         <p>SHACL is the standard way to write rules for a graph, like a building code review. Here are three rules for FCU-6F-10. Press the button to test the graph against them.</p>
         <div class="btns"><button class="btn primary" type="button" id="check">Validate the graph</button></div>
@@ -248,47 +379,211 @@ ex:R3-FCU-ZoneRoom  a sh:NodeShape ;
         </details>
       </section>
 
-      <section class="step">
+      <section class="cstep">
         <h2><span>5</span>Repair it</h2>
-        <p>A repair is proposed from the drawing evidence. Nothing changes until you approve it. This is a scripted simulation; no AI model runs here.</p>
+        <p>In SGR an LLM proposes the patch and the rules check it. Here the patch is scripted from the drawing evidence, and nothing changes until you approve it.</p>
         <div class="btns"><button class="btn primary" type="button" id="suggest">Suggest a repair</button></div>
         <div id="prop"></div>
       </section>
 
-      <section class="step">
+      <section class="cstep">
         <h2><span>6</span>Passing is not proof</h2>
-        <p>Rules check that facts fit together, not that they match the building. Record FCU-6F-10 in the wrong room <i>and</i> the wrong room’s zone, then check again.</p>
+        <p>Rules check that facts fit together, not that they match the building. Record FCU-6F-10 in the wrong room <i>and</i> the wrong room’s zone, then check again. This is why SGR is scored against a clean answer key.</p>
         <div class="btns"><button class="btn" type="button" id="cw">Record it in R6-07 instead</button></div>
         <div id="cwOut"></div>
       </section>
     </div>
-  </main>
-
-  <section class="sec" aria-labelledby="ideasH">
-    <h2 id="ideasH">The ideas in one line each</h2>
-    <p>Open any item for a short explanation.</p>
-    <div class="ideas" id="ideas"></div>
+  </div>
   </section>
+  <!-- LOOP -->
+  <section class="sec" id="loop">
+    <h2>The loop</h2>
+    <p class="sub">In the full method the patch comes from an LLM, and the loop runs until the graph passes or K attempts are used. Patches reach the graph database only after passing validation in RDF. Choose a case and press Play, or step through it.</p>
 
-  <section class="sec" aria-labelledby="srcH">
-    <h2 id="srcH">Sources and scope</h2>
-    <div class="nums">
-      <div>
-        <h3>The full 6F graph, as reported in the PDF</h3>
-        <ul><li>210 nodes and about 1,400 triples</li><li>18 fan coil units and 88 points</li><li>13 rooms on the central chillers</li><li>189 drawing-derived and 21 inferred nodes</li></ul>
+    <div class="sim" id="sim">
+      <div class="sim-h">
+        <span class="lbl">Case</span>
+        <div class="seg" role="group" aria-label="Case">
+          <button type="button" data-case="first" aria-pressed="true">Fixed first try</button>
+          <button type="button" data-case="retry" aria-pressed="false">Needs a retry</button>
+          <button type="button" data-case="fail" aria-pressed="false">Never fixed</button>
+          <button type="button" data-case="clean" aria-pressed="false">Already valid</button>
+        </div>
+        <label class="lbl" for="kSel">K (max attempts)
+          <select id="kSel"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select>
+        </label>
+        <span style="flex:1"></span>
+        <div class="ctl">
+          <button class="btn primary" type="button" id="loopPlay">Play</button>
+          <button class="btn" type="button" id="loopStep">Step</button>
+          <button class="btn" type="button" id="loopReset">Reset</button>
+        </div>
       </div>
-      <div>
-        <h3>This demo</h3>
-        <ul><li id="demoCount">13 nodes around FCU-6F-10</li><li>Identifiers from the PDF: CH-1, CH-2, FCU-6F-10, FCU-6F-10-RAT, FCU-6F-10-FSC, CHWV-6F-10, R6-08, Z-R6-08</li><li>DFE-6F-10, PNL-R6-08, CHWV-6F-10-VC, R6-07 and Z-R6-07 are illustrative names (dashed outlines)</li></ul>
+      <div class="diagram">
+        <svg viewBox="0 0 760 410" role="img" aria-labelledby="fdT fdD">
+          <title id="fdT">SGR patch data flow</title>
+          <desc id="fdD">Neo4j graph, export to RDF, pySHACL check, then the decision “violations left?”. If no, record PROV-O and sync to Neo4j via n10s, and the next round starts from the updated graph. If yes, the decision “retries below K?”. If yes, the LLM proposes a patch, it is merged in RDF and revalidated. If no, escalate to a reviewer, which creates a CMMS work order.</desc>
+          <defs>
+            <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:#8c99aa"/></marker>
+            <marker id="ahOn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:#e29400"/></marker>
+          </defs>
+          <path class="fe" id="e-neo-export" d="M162 52 H190" marker-end="url(#ah)"/>
+          <path class="fe" id="e-export-check" d="M332 52 H360" marker-end="url(#ah)"/>
+          <path class="fe" id="e-check-viol" d="M502 52 H528" marker-end="url(#ah)"/>
+          <path class="fe" id="e-viol-retry" d="M604 90 V132" marker-end="url(#ah)"/>
+          <path class="fe" id="e-viol-record" d="M680 52 H740 V355 H322" marker-end="url(#ah)"/>
+          <path class="fe" id="e-retry-llm" d="M528 170 H502" marker-end="url(#ah)"/>
+          <path class="fe" id="e-llm-merge" d="M360 170 H332" marker-end="url(#ah)"/>
+          <path class="fe" id="e-merge-check" d="M261 148 V118 H431 V76" marker-end="url(#ah)"/>
+          <path class="fe" id="e-retry-esc" d="M604 208 V258" marker-end="url(#ah)"/>
+          <path class="fe" id="e-record-neo" d="M91 332 V76" marker-end="url(#ah)"/>
+          <text class="fl" x="700" y="44">no</text>
+          <text class="fl" x="612" y="118">yes</text>
+          <text class="fl" x="508" y="160">yes</text>
+          <text class="fl" x="612" y="240">no</text>
+          <text class="fl" x="316" y="112">revalidate</text>
+          <text class="fl" x="102" y="300">next round starts from the updated graph</text>
+          <g class="fn" id="n-neo"><rect x="20" y="30" width="142" height="44" rx="8"/><text x="91" y="52">Neo4j graph</text></g>
+          <g class="fn" id="n-export"><rect x="190" y="30" width="142" height="44" rx="8"/><text x="261" y="52">Export to RDF</text></g>
+          <g class="fn" id="n-check"><rect x="360" y="30" width="142" height="44" rx="8"/><text x="431" y="52">pySHACL check</text></g>
+          <g class="fn" id="n-viol"><path d="M604 14 L680 52 L604 90 L528 52 Z"/><text x="604" y="52">Violations left?</text></g>
+          <g class="fn" id="n-retry"><path d="M604 132 L680 170 L604 208 L528 170 Z"/><text x="604" y="170">Retries below K?</text></g>
+          <g class="fn" id="n-llm"><rect x="360" y="148" width="142" height="44" rx="8"/><text x="431" y="170">LLM proposes patch</text></g>
+          <g class="fn" id="n-merge"><rect x="190" y="148" width="142" height="44" rx="8"/><text x="261" y="170">Merge in RDF</text></g>
+          <g class="fn" id="n-esc"><rect x="524" y="258" width="160" height="54" rx="8"/><text x="604" y="276">Escalate to reviewer</text><text class="s" x="604" y="296">Creates a CMMS work order</text></g>
+          <g class="fn final" id="n-record"><rect x="20" y="332" width="302" height="46" rx="8"/><text x="171" y="355">Record PROV-O, sync to Neo4j via n10s</text></g>
+        </svg>
       </div>
+      <div class="sim-b">
+        <div>
+          <h3>Run</h3>
+          <div class="status" id="status"></div>
+          <ol class="log" id="log" aria-live="polite"></ol>
+        </div>
+        <div>
+          <h3>Feedback the LLM reads (sh:message)</h3>
+          <div class="fb" id="fb">No validation yet.</div>
+          <h3>Latest patch (JSON-LD)</h3>
+          <pre id="patchOut">No patch proposed yet.</pre>
+        </div>
+      </div>
+      <p class="sim-note">Illustrative run, not experimental data. The defect (FCU-6F-10 missing its return air temperature point) is one of the documented defect types; the patch contents, their JSON-LD layout and the <code>ex:</code> namespace are illustrative. The value of K is a parameter. Nothing here calls an LLM, pySHACL or Neo4j.</p>
+    </div>
+
+    <div class="points">
+      <div><b>Patch format</b>JSON-LD listing the triples to add and the triples to remove, with a rationale.</div>
+      <div><b>Validate what the model produced</b>Merging and validation happen in RDF, so SHACL checks the model’s actual output, unaffected by the property-graph conversion.</div>
+      <div><b>Feedback in plain language</b>Each shape’s <code>sh:message</code> states what a violation means; this is the text the model reads when it tries again.</div>
+      <div><b>Bounded retries, then a person</b>After K attempts without passing, the case goes to a reviewer, which creates a CMMS work order.</div>
+      <div><b>Only valid states are written back</b>The graph database receives a state only after it passes validation.</div>
+      <div><b>Provenance on every change</b>Accepted changes are recorded with PROV-O before syncing to Neo4j via n10s.</div>
     </div>
   </section>
 
+  <!-- ANSWER KEY -->
+  <section class="sec" id="answer-key">
+    <h2>The answer key: the 6F baseline graph</h2>
+    <p class="sub">The HVAC system on the sixth floor of a research building, rebuilt from its as-built drawings with Brick Schema 1.4.4 and RealEstateCore. Defects are injected into this clean graph, and repairs are judged against it.</p>
+    <div class="stats">
+      <div><b>210</b><span>nodes</span></div>
+      <div><b>≈1,400</b><span>triples</span></div>
+      <div><b>18</b><span>fan coil units</span></div>
+      <div><b>88</b><span>points, all backed by control drawings</span></div>
+      <div><b>13</b><span>rooms served by the central chillers</span></div>
+      <div><b>189</b><span>drawing-derived nodes</span></div>
+      <div><b>21</b><span>inferred nodes</span></div>
+      <div><b>0</b><span>synthetic-completion nodes</span></div>
+    </div>
+    <h3>Quality</h3>
+    <ul>
+      <li>Passes every SHACL shape shipped with the official Brick 1.4.4. During modelling, the first version produced 55 violations because some relationships were written the wrong way; after correction there were none.</li>
+      <li>An early version contained 26 points filled in to complete the model. After the control drawings were found, all 26 were replaced by drawing-backed points.</li>
+    </ul>
+    <h3>Provenance on every node and relation</h3>
+    <div class="tblwrap"><table>
+      <thead><tr><th>Assertion status</th><th>Meaning</th><th>When it is used</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">drawing-derived</td><td>Taken directly from the as-built drawings</td><td>The sheet and the specific layer, block or text can be named</td></tr>
+        <tr><td class="mono">inferred</td><td>Reasoned from the drawings</td><td>The drawings point in a direction but cannot confirm it; the reason is stated in the source field</td></tr>
+        <tr><td class="mono">synthetic-completion</td><td>Synthetic data added for experiments</td><td>Currently none; any addition is marked separately from original data</td></tr>
+      </tbody>
+    </table></div>
+    <p>A relation never carries a stronger status than its endpoints: if an endpoint is inferred, every relation to it is inferred too.</p>
+    <h3>Reproducibility</h3>
+    <ul>
+      <li>The graph is generated by a build script from the converted drawings; the Turtle file is never edited by hand.</li>
+      <li>Rerunning the script on the same input gives the same SHA-256 hash.</li>
+      <li>Version 1.0 is frozen with its node count, triple count, inferred count and hash recorded. Any correction becomes a new version, and every test that depends on the baseline is rerun.</li>
+    </ul>
+  </section>
+
+  <!-- PIPELINE -->
+  <section class="sec" id="pipeline">
+    <h2>Pipeline</h2>
+    <p class="sub">From drawings to a validated, versioned graph, and around the repair loop.</p>
+    <ol class="pipe">
+      <li><span><b>As-built drawings</b>AutoCAD R14 files covering the equipment schedule, system flow diagram, HVAC and architectural plans, and control schematics.</span></li>
+      <li><span><b>Local conversion</b>LibreDWG 0.13.3 converts the drawings to JSON or DXF, read in Python. No online viewers or conversion services are used.</span></li>
+      <li><span><b>Scripted build</b>A build script produces the Turtle graph and a modelling table; the table records the assertion status of each relation.</span></li>
+      <li><span><b>Freeze</b>The baseline is versioned and frozen with its SHA-256 hash.</span></li>
+      <li><span><b>Graph database</b>Loaded into Neo4j 5.26 through n10s 5.26. A round-trip check compares the exported triples with the original file, and any differences are resolved before data taken from Neo4j is validated.</span></li>
+      <li><span><b>Validation</b>Exported to RDF and checked with pySHACL, using the Brick 1.4.4 ontology and RDFS inference.</span></li>
+      <li class="loop"><span><b>SGR repair loop</b>Patch, merge in RDF, revalidate, retry up to K, or escalate.</span></li>
+      <li><span><b>Record and sync</b>PROV-O provenance is recorded and the passing state is synced back to Neo4j via n10s.</span></li>
+    </ol>
+  </section>
+
+  <!-- EVALUATION -->
+  <section class="sec" id="evaluation">
+    <h2>Evaluation design</h2>
+    <p class="sub">Defects that imitate real handover errors are injected into the clean baseline. SGR then tries to repair them, and the result is compared with the baseline.</p>
+    <h3>Defect types (examples)</h3>
+    <div class="tblwrap"><table>
+      <thead><tr><th>Injected defect</th><th>Real situation it imitates</th><th>What the rules should report</th></tr></thead>
+      <tbody>
+        <tr><td>Delete a fan coil unit’s return air temperature point</td><td>Handover data omit a sensor</td><td>The unit lacks a return air temperature point</td></tr>
+        <tr><td>Delete a fan coil unit’s “located in” relation</td><td>The equipment list gives no installed location</td><td>That equipment has no location</td></tr>
+        <tr><td>Point a fan coil unit’s “feeds” to another room’s zone</td><td>The floor plan and the system drawing disagree</td><td>The zone does not match the room where the equipment is</td></tr>
+      </tbody>
+    </table></div>
+    <h3>Rules</h3>
+    <ul>
+      <li>Rule content is set by the supervising researcher, then transcribed into SHACL. Each rule is one <code>sh:NodeShape</code> named with its rule ID, and its <code>rdfs:comment</code> cites the source: a COBie clause, a Brick rule or a drawing number.</li>
+      <li>Every rule passes a positive test (the baseline gives zero violations) and a negative test (a small graph that breaks the rule reports a violation on the right node) before it is frozen with its hash.</li>
+      <li>Shapes use <code>sh:inversePath</code> for relations pointing the other way and <code>sh:qualifiedValueShape</code> to restrict the class being counted.</li>
+    </ul>
+    <h3>Why validation runs in pySHACL</h3>
+    <p>n10s can validate inside Neo4j, but it supports only part of SHACL, and inverse paths and qualified constraints would need separate testing. SGR experiments therefore always export to RDF and validate with pySHACL, with the Brick ontology and RDFS inference. Without them, subclass checks fail silently.</p>
+    <h3>Results</h3>
+    <div class="pending"><b class="i">!</b><span>To be added from the paper. No results are shown on this page.</span></div>
+  </section>
+
+  <!-- AVAILABILITY -->
+  <section class="sec" id="availability">
+    <h2>Data and code availability</h2>
+    <ul>
+      <li>The conversion scripts and the reconstruction record accompany the dataset.</li>
+      <li>The as-built drawings, the baseline graph and files derived from them are internal. They are not published or uploaded to external services.</li>
+      <li>Code, SHACL shapes and queries can be shared once building names and drawing content are removed.</li>
+    </ul>
+    <div class="tblwrap"><table>
+      <thead><tr><th>Component</th><th>Version</th></tr></thead>
+      <tbody>
+        <tr><td>Brick Schema</td><td class="mono">1.4.4</td></tr>
+        <tr><td>RealEstateCore</td><td>for spaces and zones (version not stated in the source documents)</td></tr>
+        <tr><td>LibreDWG</td><td class="mono">0.13.3</td></tr>
+        <tr><td>Neo4j</td><td class="mono">5.26.32</td></tr>
+        <tr><td>n10s (neosemantics)</td><td class="mono">5.26.0</td></tr>
+        <tr><td>pySHACL, rdflib</td><td>recorded with every run (not stated in the source documents)</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
   <footer class="foot">
-    <p>Based on <i>From As-Built Drawings to a Knowledge Graph: An Introduction to the 6F Baseline Graph</i> (Chien-Pu Huang, Oct 25, 2026).</p>
-    <p>This is an educational simulation of graph data only. It does not calculate temperatures or control equipment, it is not the full graph or the real floor plan, and the checks are JavaScript written to behave like SHACL rules.</p>
+    <p>This page restates two lab documents: the 6F baseline graph introduction (Oct 25, 2026) and the SGR research work manual (Oct 26, 2026). Building names, drawing numbers and internal infrastructure details are left out. Identifiers such as FCU-6F-10 and R6-08 come from the introduction; DFE-6F-10, PNL-R6-08, CHWV-6F-10-VC, R6-07 and Z-R6-07 are illustrative names used in the “Try it” graph.</p>
+    <p>Both interactive parts are illustrations. They do not run an LLM, a SHACL engine or a database, they do not calculate temperatures, and they report no experimental results.</p>
   </footer>
-</div>
+</main>
 
 <script>
 (() => {
@@ -312,7 +607,7 @@ const R = {equip:20, ctrl:20, point:14, space:21, zone:23};
 const NODES = {
   'CH-1':{t:'Chiller', x:90, y:95, id:'pdf', props:[['Chilled water reaches 3F to 9F through the main riser', 'drawn']]},
   'CH-2':{t:'Chiller', x:90, y:250, id:'pdf', props:[]},
-  'FCU-6F-10':{t:'FCU', x:330, y:170, id:'pdf', props:[['Model FC-8', 'inferred', 'from the room size'], ['6,048 kcal/h cooling, 1,360 CMH airflow', 'inferred', 'schedule values for the inferred model'], ['Drawn on sheet M3,4,5-06F (6F HVAC plan)', 'drawn']]},
+  'FCU-6F-10':{t:'FCU', x:330, y:170, id:'pdf', props:[['Model FC-8', 'inferred', 'from the room size'], ['6,048 kcal/h cooling, 1,360 CMH airflow', 'inferred', 'schedule values for the inferred model'], ['Drawn on the 6F HVAC plan', 'drawn']]},
   'R6-08':{t:'Office', x:800, y:170, id:'pdf', props:[['Faculty office', 'drawn'], ['25.2 m²', 'drawn']]},
   'Z-R6-08':{t:'Zone', x:570, y:250, id:'pdf', props:[]},
   'Z-R6-07':{t:'Zone', x:570, y:70, id:'illus', props:[['A neighbouring zone, added so a defect has somewhere wrong to point', 'illus']]},
@@ -372,11 +667,11 @@ function runChecks() {
 function proposal() {
   const c = runChecks().find(r => !r.ok);
   if (!c) return null;
-  if (c.id === 'C1') return {c, evidence:'The DFE control drawing shows AI×1, a return air temperature sensor, for this unit (PDF §6.2).',
+  if (c.id === 'C1') return {c, evidence:'The DFE control drawing shows AI×1, a return air temperature sensor, for this unit.',
     adds:[[F, 'hasPoint', 'FCU-6F-10-RAT'], ['FCU-6F-10-RAT', 'hostedBy', 'DFE-6F-10']], dels:[], node:'FCU-6F-10-RAT'};
-  if (c.id === 'C2') return {c, evidence:'The HVAC plan places the unit in R6-08 once it is aligned with the architectural plan (PDF §4, §5.2).',
+  if (c.id === 'C2') return {c, evidence:'The HVAC plan places the unit in R6-08 once it is aligned with the architectural plan.',
     adds:[[F, 'locatedIn', 'R6-08']], dels:out(F, 'locatedIn').filter(r => r !== 'R6-08').map(r => [F, 'locatedIn', r])};
-  return {c, evidence:'The PDF says the unit supplies Z-R6-08, and that zone contains R6-08 (PDF §5.2).',
+  return {c, evidence:'The baseline records that the unit supplies Z-R6-08, and that zone contains R6-08.',
     adds:[[F, 'feeds', 'Z-R6-08']], dels:out(F, 'feeds').filter(z => z !== 'Z-R6-08').map(z => [F, 'feeds', z])};
 }
 
@@ -442,7 +737,7 @@ function draw() {
 }
 function info() {
   const id = S.sel, t = typeOf(id), live = S.nodes.has(id), N = NODES[id] || {};
-  const idTag = N.id === 'pdf' ? '<span class="tag drawn">name from the PDF</span>' : '<span class="tag illus">illustrative name</span>';
+  const idTag = N.id === 'pdf' ? '<span class="tag drawn">documented name</span>' : '<span class="tag illus">illustrative name</span>';
   let h = `<h3>${esc(id)}</h3><p class="t">${esc(TYPES[t]?.label || '')} ${idTag}${live ? '' : ' <span class="tag wrong">removed from the graph</span>'}</p><ul class="facts">`;
   for (const [txt, pv, why] of N.props || []) h += `<li${live ? '' : ' class="gone"'}><span>${esc(txt)}</span>${tag(pv)}${why ? `<span class="hint">${esc(why)}</span>` : ''}</li>`;
   const rels = S.facts.filter(f => f.s === id || f.o === id);
@@ -471,7 +766,7 @@ $('#trip').addEventListener('click', async () => {
   const changed = S.facts.some(f => !BASEKEYS.has(key(f))) || BASE.some(f => !has(f.s, f.p, f.o));
   $('#tripOut').hidden = false;
   $('#tripOut').innerHTML = `<div class="result demo"><span>In this small demo graph, CH-1 reaches <b class="big">${rooms.length}</b> room${rooms.length === 1 ? '' : 's'}: ${names.length ? esc(names.join(', ')) : 'none'}.</span>${changed ? '<span>The graph has been changed in step 3 or 6, so this answer follows the changed graph.</span>' : ''}</div>
-    <div class="result pdf"><span>In the full 6F graph the PDF reports <b class="big">13</b> rooms: 7 faculty offices, 2 graduate student rooms, 2 academic exchange rooms, 1 laboratory and a lounge. The data room is not on the list; it has its own cooling system.</span></div>
+    <div class="result pdf"><span>On the full 6F graph the same query returns <b class="big">13</b> rooms: 7 faculty offices, 2 graduate student rooms, 2 academic exchange rooms, 1 laboratory and a lounge. The data room is not on the list; it has its own cooling system.</span></div>
     <p class="note warn">These rooms <b>may</b> be affected. FCU-6F-10 also gets chilled water from CH-2, so a link in the graph does not prove a room loses cooling.</p>`;
   b.disabled = false; b.textContent = 'Run again';
 });
@@ -533,23 +828,126 @@ $('#cw').addEventListener('click', () => {
   $('#cwOut').innerHTML = `<p class="note warn">${res.every(r => r.ok) ? 'All three rules pass' : 'Some rules fail'}, yet the drawings put FCU-6F-10 in R6-08. The rules only check that facts agree with each other. That is why the research keeps a clean baseline graph as an answer key. Press Reset to undo.</p>`;
 });
 
-$('#reset').addEventListener('click', () => { fresh(); clearTrip(); $('#checks').hidden = true; $('#prop').innerHTML = ''; $('#cwOut').innerHTML = ''; render(); });
-
-/* ---------- ideas ---------- */
-const IDEAS = [
-  ['Node', 'One thing the computer knows about: a chiller, a fan coil unit, a room, a sensor.'],
-  ['Relationship', 'A named arrow between two nodes. “FCU-6F-10 → located in → R6-08” says where the unit is installed. Direction matters.'],
-  ['Triple', 'One fact in one sentence: subject, relationship, object. The full 6F graph has about 1,400 of them.'],
-  ['Brick and REC', 'Shared dictionaries, like drawing legends everyone agrees on. Brick names equipment and points (Brick 1.4.4); RealEstateCore names spaces such as offices and HVAC zones.'],
-  ['Point', 'Where equipment talks: a sensor reports (eyes), a command acts (hands), a setpoint is a target, a status is an indicator light. Points come from the I/O on control drawings.'],
-  ['Provenance', 'Where a fact came from and how sure it is. The model FC-8 is inferred from room size, so it is labelled inferred, not drawn.'],
-  ['SHACL validation', 'Rules written in SHACL check the graph automatically, like a building code review, and name the node that breaks a rule. The real baseline passes every Brick 1.4.4 rule. Try it in step 4.'],
-  ['Repair with checks', 'In the SGR research a language model proposes a fix, the rules check it, and it tries again if it fails. A clean baseline graph is the answer key used to score repairs.'],
-];
-$('#ideas').innerHTML = IDEAS.map(([t, d], i) => `<details><summary><span>${String(i + 1).padStart(2, '0')}</span>${t}</summary><p>${d}</p></details>`).join('');
+$('#unitReset').addEventListener('click', () => { fresh(); clearTrip(); $('#checks').hidden = true; $('#prop').innerHTML = ''; $('#cwOut').innerHTML = ''; render(); });
 
 fresh(); render();
 window.__lab = {get S() { return S; }, runChecks};
+})();
+</script>
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const CTX = {"brick": "https://brickschema.org/schema/Brick#", "ex": "https://example.org/6f#"};
+const GOOD = {"@context": CTX,
+  "add": [{"@id": "ex:FCU-6F-10", "brick:hasPoint": {"@id": "ex:FCU-6F-10-RAT"}}, {"@id": "ex:FCU-6F-10-RAT", "@type": "brick:Return_Air_Temperature_Sensor"}],
+  "remove": [], "rationale": "The unit's controller has one analog input for return air temperature on the control drawing."};
+const BAD = {"@context": CTX,
+  "add": [{"@id": "ex:FCU-6F-10", "brick:hasPoint": {"@id": "ex:FCU-6F-10-SAT"}}, {"@id": "ex:FCU-6F-10-SAT", "@type": "brick:Supply_Air_Temperature_Sensor"}],
+  "remove": [], "rationale": "Adds an air temperature sensor, typed as supply air."};
+const MSG = 'Focus node: ex:FCU-6F-10\nPath: brick:hasPoint\nMessage: FCU lacks a return air temperature point';
+let CASE = 'first', steps = [], idx = -1, timer = null, lastPill = null, lastAttempt = 0, lastFb = null;
+
+function script(kase, K) {
+  const s = [], push = (node, edge, text, x = {}) => s.push({node, edge, text, ...x});
+  push('neo', null, 'Start from the current graph in Neo4j.');
+  push('export', 'neo-export', 'Export the graph to RDF with n10s.');
+  push('check', 'export-check', 'Validate with pySHACL (Brick 1.4.4 ontology, RDFS inference).');
+  if (kase === 'clean') {
+    push('viol', 'check-viol', 'Violations left? No.', {pill:['ok', 'Conforms'], fb:'ok'});
+    push('record', 'viol-record', 'Record PROV-O and sync to Neo4j via n10s.');
+    push('neo', 'record-neo', 'The next round starts from the updated graph.', {end:'ok'});
+    return s;
+  }
+  push('viol', 'check-viol', 'Violations left? Yes, 1 violation on FCU-6F-10.', {pill:['bad', '1 violation'], fb:'bad'});
+  let tries = 0;
+  for (;;) {
+    if (tries >= K) {
+      push('retry', 'viol-retry', `Retries below K? No (${tries} of ${K} used).`);
+      push('esc', 'retry-esc', 'Escalate to a reviewer; a CMMS work order is created. Neo4j is not changed.', {end:'bad'});
+      return s;
+    }
+    push('retry', 'viol-retry', `Retries below K? Yes (${tries} of ${K} used).`);
+    const passes = kase === 'first' ? tries === 0 : kase === 'retry' ? tries === 1 : false;
+    tries++;
+    push('llm', 'retry-llm', `Attempt ${tries}: the LLM reads the sh:message and proposes a JSON-LD patch.`, {patch:passes ? GOOD : BAD, attempt:tries});
+    push('merge', 'llm-merge', 'Merge the patch in RDF, not in Neo4j.');
+    push('check', 'merge-check', 'Revalidate the merged graph with pySHACL.');
+    if (passes) {
+      push('viol', 'check-viol', 'Violations left? No.', {pill:['ok', 'Conforms'], fb:'ok'});
+      push('record', 'viol-record', 'Record PROV-O for the accepted patch and sync the passing state to Neo4j via n10s.');
+      push('neo', 'record-neo', 'The next round starts from the updated graph.', {end:'ok'});
+      return s;
+    }
+    push('viol', 'check-viol', 'Violations left? Yes. A supply air sensor does not satisfy the rule.', {pill:['bad', 'Still 1 violation'], fb:'bad'});
+  }
+}
+const K = () => +$('#kSel').value;
+function setStatus(end) {
+  const p = lastPill ? `<span class="pill ${lastPill[0]}">${lastPill[0] === 'ok' ? '✓' : '✕'} ${lastPill[1]}</span>` : '<span class="pill idle">Not validated yet</span>';
+  const a = `<span class="pill idle">Attempts: ${lastAttempt} of ${K()}</span>`;
+  const e = end === 'ok' ? '<span class="pill ok">✓ Written to Neo4j</span>' : end === 'bad' ? '<span class="pill warn">⚑ Escalated, Neo4j unchanged</span>' : '';
+  $('#status').innerHTML = p + a + e;
+  const fb = $('#fb');
+  if (!lastFb) { fb.className = 'fb okk'; fb.textContent = 'No validation yet.'; }
+  else if (lastFb === 'ok') { fb.className = 'fb okk'; fb.textContent = 'Conforms: True\nNo violations, nothing to feed back.'; }
+  else { fb.className = 'fb'; fb.textContent = 'Conforms: False\n' + MSG; }
+  fb.style.whiteSpace = 'pre-wrap';
+}
+function reset() {
+  stop(); steps = script(CASE, K()); idx = -1; lastPill = null; lastAttempt = 0; lastFb = null;
+  document.querySelectorAll('.fn').forEach(n => n.classList.remove('on', 'done', 'end-ok', 'end-bad'));
+  document.querySelectorAll('.fe').forEach(e => { e.classList.remove('on', 'done'); e.setAttribute('marker-end', 'url(#ah)'); });
+  $('#log').innerHTML = ''; $('#patchOut').textContent = 'No patch proposed yet.';
+  setStatus(); sync();
+}
+function step() {
+  if (idx >= steps.length - 1) return false;
+  const st = steps[++idx];
+  document.querySelectorAll('.fn.on').forEach(n => { n.classList.remove('on'); n.classList.add('done'); });
+  document.querySelectorAll('.fe.on').forEach(e => { e.classList.remove('on'); e.classList.add('done'); e.setAttribute('marker-end', 'url(#ah)'); });
+  const n = $('#n-' + st.node); n.classList.remove('done'); n.classList.add('on');
+  if (st.edge) { const e = $('#e-' + st.edge); e.classList.remove('done'); e.classList.add('on'); e.setAttribute('marker-end', 'url(#ahOn)'); }
+  if (st.patch) $('#patchOut').textContent = JSON.stringify(st.patch, null, 2);
+  if (st.pill) lastPill = st.pill;
+  if (st.attempt) lastAttempt = st.attempt;
+  if (st.fb) lastFb = st.fb;
+  if (st.end) { n.classList.remove('on'); n.classList.add(st.end === 'ok' ? 'end-ok' : 'end-bad'); if (st.end === 'ok') $('#n-record').classList.add('end-ok'); }
+  setStatus(st.end);
+  const log = $('#log');
+  log.querySelectorAll('.cur').forEach(l => l.classList.remove('cur'));
+  const li = document.createElement('li'); li.className = 'cur';
+  li.innerHTML = `<i>${idx + 1}</i><span></span>`; li.lastChild.textContent = st.text;
+  log.appendChild(li); log.scrollTop = log.scrollHeight;
+  sync();
+  return idx < steps.length - 1;
+}
+function stop() { clearTimeout(timer); timer = null; }
+function play() {
+  if (idx >= steps.length - 1) reset();
+  stop();
+  const tick = () => { if (step()) timer = setTimeout(tick, reduce ? 300 : 1000); else { timer = null; sync(); } };
+  tick(); sync();
+}
+function sync() {
+  const end = idx >= steps.length - 1;
+  $('#loopStep').disabled = end;
+  $('#loopPlay').textContent = timer ? 'Pause' : end && idx >= 0 ? 'Play again' : 'Play';
+}
+$('#loopPlay').addEventListener('click', () => { if (timer) { stop(); sync(); } else play(); });
+$('#loopStep').addEventListener('click', () => { stop(); step(); });
+$('#loopReset').addEventListener('click', reset);
+$('#kSel').addEventListener('change', reset);
+document.querySelectorAll('[data-case]').forEach(b => b.addEventListener('click', () => {
+  CASE = b.dataset.case;
+  document.querySelectorAll('[data-case]').forEach(x => x.setAttribute('aria-pressed', x === b));
+  reset();
+}));
+// open in a finished state so the first view shows a complete run
+CASE = 'retry';
+document.querySelectorAll('[data-case]').forEach(x => x.setAttribute('aria-pressed', x.dataset.case === 'retry'));
+reset(); while (step()) {} sync();
 })();
 </script>
 

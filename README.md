@@ -1,22 +1,22 @@
-# 6F Knowledge Graph Lab
+# Symbolic-Guided Regeneration (SGR)
 
-A one-page educational simulation of how as-built drawings become a knowledge graph, based on
-*From As-Built Drawings to a Knowledge Graph: An Introduction to the 6F Baseline Graph*
-(Chien-Pu Huang, Oct 25, 2026).
+Website for the SGR journal paper.
 
 Live site: https://finansiapurba-cae.github.io/6f-knowledge-graph-lab/
 
-## What you can do
+When a large language model repairs or updates a building's knowledge graph, how do we make sure it does not make things up? SGR lets the model propose a patch, checks the patched graph against SHACL rules, and feeds every violation back until the graph passes or a reviewer takes over.
 
-1. Explore the graph around fan coil unit FCU-6F-10 and see where each fact came from (drawn, inferred, illustrative).
-2. Trip chiller CH-1 and follow the arrows to the rooms it serves.
-3. Break the graph the way real handover mistakes do.
-4. Check it with three rules.
-5. Approve or reject evidence-based repairs.
-6. See why passing the rules is not proof that the graph matches the building.
+## What is on the site
 
-## Files
+1. **Story:** a chiller trips; which rooms get hot? Why the answer depends on a correct graph, and why as-built drawings leave gaps.
+2. **Try it on one unit:** inject a defect into the graph around one fan coil unit, run SHACL-style validation, and approve or reject a repair.
+3. **The SGR loop:** step through the patch data flow: validate, propose a patch, revalidate, retry up to K, escalate or write back.
+4. **Answer key, pipeline, evaluation design, data and code availability.**
 
-- `index.html`: the whole website in one file. No build step, no server, no API key.
+The paper's title, authors, abstract, results and citation will be added from the paper.
 
-It is an educational simulation of graph data only: it does not calculate temperatures or control equipment, and it is not the full 6F graph or the real floor plan.
+## Notes
+
+- `index.html` is the whole site in one file. No build step, no server, no API key.
+- The interactive parts are illustrations. They do not run an LLM, a SHACL engine or a database, and they report no experimental results.
+- The as-built drawings and the baseline graph are internal and are not part of this repository.

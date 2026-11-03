@@ -4,15 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>SGR Building Information Review</title>
-<meta name="description" content="A demonstration of how SGR helps facility operators check building information, understand problems, and review proposed corrections with evidence and a decision history.">
+<meta name="description" content="A demonstration of how SGR helps facility operators check building information, understand problems, and review proposed corrections. The building information lives in a knowledge graph inside the page.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
 <style>
-/* Layout: an operator review tool. Equipment list on the left, the selected
-   problem as a review thread in the middle (problem, proposed correction with
-   evidence, question, decision, history), and an optional "what the system does"
-   panel on the right. Light theme only, navy + teal. */
+/* Layout: an operator review tool with two tabs. Review: equipment list, the
+   selected problem as a review thread (problem, proposed correction with evidence,
+   question, decision, history) and an optional "what the system does" panel.
+   Knowledge graph: the stored graph as a diagram plus its live Turtle text.
+   Light theme only, navy + teal. */
 :root{
   color-scheme: light;
   --bg:#f2f5f8; --surface:#ffffff; --surface-2:#f7f9fb; --line:#d8e0e8; --line-2:#b8c5d3;
@@ -188,6 +189,52 @@ button,input,textarea{font:inherit;color:inherit}
 @media (max-width:900px){.about{grid-template-columns:1fr}}
 .about .card p{font-size:14.5px;color:var(--ink-2)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--navy);color:#fff;padding:8px 14px;border-radius:999px;font-size:13.5px;z-index:40}
+
+/* tabs */
+.tabs{display:flex;gap:4px;padding-top:12px;border-bottom:1px solid var(--line)}
+.tabs button{border:1px solid transparent;border-bottom:0;background:transparent;padding:9px 16px;font:600 14.5px var(--font);color:var(--muted);cursor:pointer;border-radius:8px 8px 0 0;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{background:var(--surface);border-color:var(--line);color:var(--navy)}
+.tabs .cnt{font:500 12px var(--mono);color:var(--muted);margin-left:6px}
+
+/* knowledge graph tab */
+.kg{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;align-items:start;padding-block:14px 24px}
+@media (max-width:1100px){.kg{grid-template-columns:1fr}}
+.kgbar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--ink-2)}
+.kgbar .sp{flex:1}
+.kgbar label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.kgbar input{accent-color:var(--teal)}
+.kgbox{overflow-x:auto;background:radial-gradient(circle at 1px 1px,#dbe3ec 1px,transparent 1.3px) 0 0/22px 22px,var(--surface-2);border-radius:0 0 10px 10px}
+#kgsvg{display:block;width:100%;min-width:760px;height:auto}
+.ke{fill:none;stroke:#8695a9;stroke-width:1.6}
+.ke.prop{stroke:var(--teal);stroke-width:2.6;stroke-dasharray:7 4}
+.ke.new{stroke:var(--ok);stroke-width:2.8}
+.ke.hl{stroke:var(--navy-2);stroke-width:2.4}
+.ke.dim{opacity:.25}
+.kel{font:500 10px var(--mono);fill:var(--ink-2);paint-order:stroke;stroke:#f7f9fb;stroke-width:4px;text-anchor:middle;pointer-events:none}
+.kel.prop{fill:var(--teal-2);font-weight:600}
+.kel.new{fill:var(--ok);font-weight:600}
+.kn{cursor:pointer}
+.kn .sh{stroke-width:2}
+.kn .gl{font:600 9px var(--mono);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.kn .lb{font:600 11px var(--mono);text-anchor:middle;fill:var(--ink);paint-order:stroke;stroke:#f7f9fb;stroke-width:4px;pointer-events:none}
+.kn .ring{fill:none;stroke:var(--navy-2);stroke-width:3;opacity:0}
+.kn.sel .ring{opacity:1}
+.kn.dim{opacity:.3}
+.kn.prop .sh{stroke:var(--teal)!important;stroke-dasharray:5 3}
+.kn:focus{outline:none}
+.kn:focus-visible .ring{opacity:1;stroke:var(--teal)}
+.kbad circle{stroke:#fff;stroke-width:1.5}
+.kbad text{font:700 10px var(--font);fill:#fff;text-anchor:middle;dominant-baseline:central}
+.klegend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-2)}
+.klegend span{display:inline-flex;align-items:center;gap:6px}
+.nodeinfo{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.nodeinfo .eqname{font-size:20px}
+.trip{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.trip li{font:12.5px/1.5 var(--mono);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:5px 8px;word-break:break-word}
+.trip li.newt{border-color:#a8d5b6;background:var(--ok-soft)}
+.ttl{margin:0;background:var(--navy);color:#dbe6f5;border-radius:8px;padding:10px 12px;overflow:auto;font:11.5px/1.55 var(--mono);white-space:pre;max-height:420px}
+.ttl .p{color:#7fd8d4} .ttl .l{color:#ffd28a} .ttl .c{color:#8ea3c0}
+.copy{font:500 12.5px var(--font);border:1px solid var(--line-2);background:var(--surface);border-radius:6px;padding:3px 9px;cursor:pointer}
 </style>
 
 </head>
@@ -195,7 +242,7 @@ button,input,textarea{font:inherit;color:inherit}
 <header class="top gutter">
   <div class="wrap">
     <div class="brand"><b>Building information review</b><span>Level 6 · SGR demonstration</span></div>
-    <span class="sim" title="Rule checks, proposals, validation and work orders on this page are simulated.">Simulated checks and proposals</span>
+    <span class="sim" title="Proposed corrections, validation timing and work orders are simulated. The rule checks run on the knowledge graph inside this page.">Demo data · simulated proposals</span>
     <label class="who" for="who">Reviewer <input id="who" type="text" value="Demo operator" autocomplete="off"></label>
     <button class="tbtn" type="button" id="toggleBehind" aria-pressed="true">What the system does</button>
     <button class="tbtn" type="button" id="resetDemo">Reset demo</button>
@@ -203,23 +250,46 @@ button,input,textarea{font:inherit;color:inherit}
 </header>
 
 <div class="wrap gutter">
-  <nav class="steps" id="steps" aria-label="Review steps"></nav>
-  <div class="grid" id="grid">
-    <aside class="panel" aria-label="Equipment">
-      <div class="ph"><h2>Equipment</h2><span class="small" id="openCount"></span></div>
-      <ul class="list" id="list"></ul>
-    </aside>
-    <main class="thread" id="thread" aria-live="polite"></main>
-    <aside class="panel behind" id="behind" aria-label="What the system does">
-      <div class="ph"><h2>What the system does</h2><span class="chip c-simu">simulated</span></div>
-      <div class="body" id="behindBody"></div>
-    </aside>
+  <div class="tabs" role="tablist" aria-label="Views">
+    <button role="tab" type="button" id="tabReview" aria-selected="true" aria-controls="viewReview">Review</button>
+    <button role="tab" type="button" id="tabGraph" aria-selected="false" aria-controls="viewGraph">Knowledge graph<span class="cnt" id="kgCount"></span></button>
+  </div>
+
+  <div id="viewReview" role="tabpanel" aria-labelledby="tabReview">
+    <nav class="steps" id="steps" aria-label="Review steps"></nav>
+    <div class="grid" id="grid">
+      <aside class="panel" aria-label="Equipment">
+        <div class="ph"><h2>Equipment</h2><span class="small" id="openCount"></span></div>
+        <ul class="list" id="list"></ul>
+      </aside>
+      <main class="thread" id="thread" aria-live="polite"></main>
+      <aside class="panel behind" id="behind" aria-label="What the system does">
+        <div class="ph"><h2>What the system does</h2><span class="chip c-simu">behind the page</span></div>
+        <div class="body" id="behindBody"></div>
+      </aside>
+    </div>
+  </div>
+
+  <div id="viewGraph" role="tabpanel" aria-labelledby="tabGraph" hidden>
+    <div class="kg">
+      <section class="panel" aria-label="Knowledge graph diagram">
+        <div class="kgbar"><b>Level 6 knowledge graph</b><span>Everything the Review tab shows is read from this graph, and approved corrections are written back into it.</span><span class="sp"></span><label for="kgLabels"><input type="checkbox" id="kgLabels" checked> Relationship names</label></div>
+        <div class="kgbox"><svg id="kgsvg" viewBox="0 0 1000 600" role="img" aria-label="Knowledge graph of level 6"></svg></div>
+        <div class="klegend" id="klegend"></div>
+      </section>
+      <aside class="panel" aria-label="Selected node and stored triples">
+        <div class="ph"><h2>Selected node</h2></div>
+        <div class="nodeinfo" id="nodeinfo"></div>
+        <div class="ph" style="border-top:1px solid var(--line)"><h2>Stored as Turtle</h2><button class="copy" id="copyTtl" type="button">Copy</button></div>
+        <div style="padding:12px 14px"><pre class="ttl" id="ttl" tabindex="0"></pre></div>
+      </aside>
+    </div>
   </div>
 
   <section class="about" aria-label="About this demonstration">
-    <div class="card"><h3>What this is</h3><p>A demonstration of how SGR helps people govern changes to building information. The knowledge graph stores the building information; this page makes it understandable and lets an operator review each proposed correction before anything changes.</p></div>
-    <div class="card"><h3>What is simulated</h3><p>The rule checks, the proposed corrections, the validation and the work orders are scripted for this demo. No language model, SHACL engine or database runs here, and nothing is sent anywhere. Your decisions stay in this browser tab.</p></div>
-    <div class="card"><h3>Where the examples come from</h3><p>AHU-02, VAV-03, Mechanical Room 01 and Room R6-12 are example data. FCU-6F-10, CH-1 and room R6-08 follow the documented 6F baseline graph, including the control drawing that shows one analog input for return air temperature.</p></div>
+    <div class="card"><h3>What this is</h3><p>A demonstration of how SGR helps people govern changes to building information. The knowledge graph inside this page stores the building information; the Review tab makes it understandable and lets an operator review each proposed correction before anything changes.</p></div>
+    <div class="card"><h3>What is real and what is simulated</h3><p>The graph and the rule checks are real: the rules run on the stored triples every time, and approved corrections are written back with a decision record. The proposed corrections, the evidence and the work orders are scripted. No language model, SHACL engine or database runs here, and nothing is sent anywhere.</p></div>
+    <div class="card"><h3>Where the examples come from</h3><p>AHU-02, VAV-03, Mechanical Room 01 and Room R6-12 are example data. FCU-6F-10, CH-1, CH-2 and room R6-08 follow the documented 6F baseline graph, including the control drawing that shows one analog input for return air temperature.</p></div>
   </section>
 </div>
 <div class="toast" id="toast" hidden></div>
@@ -231,129 +301,199 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const now = () => new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false});
+const stamp = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
 function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2600); }
 
-/* ---------------- demo data ---------------- */
-function freshData() {
-  const EQ = {
-    'AHU-02': {type:'Air handling unit', demo:true, location:null,
-      links:[['supplies air to', 'VAV-03'], ['has sensor', 'Supply air temperature sensor']],
-      sensors:['Supply air temperature'], sources:'Equipment schedule (example)', issue:'loc'},
-    'FCU-6F-10': {type:'Fan coil unit', demo:false, location:'Room R6-08 (faculty office, 25.2 m²)',
-      links:[['receives chilled water from', 'CH-1'], ['receives chilled water from', 'CH-2'], ['located in', 'Room R6-08'], ['controlled by', 'DFE controller']],
-      sensors:['Fan speed command (high / medium / low)', 'Valve command (open / close)'], sources:'6F HVAC plan, control drawings', issue:'rat'},
-    'VAV-03': {type:'VAV box (air terminal)', demo:true, location:'Room R6-12',
-      links:[['receives air from', 'AHU-02'], ['located in', 'Room R6-12']],
-      sensors:['Airflow'], sources:'Equipment schedule (example)', issue:null},
-    'CH-1': {type:'Chiller', demo:false, location:'Roof',
-      links:[['supplies chilled water to', 'FCU-6F-10'], ['part of', 'Central chilled water system']],
-      sensors:['Start / stop command'], sources:'Equipment schedule, system flow diagram', issue:null},
-  };
-  const IS = {
-    loc: {id:'Q-101', equip:'AHU-02', title:'AHU-02 is missing its location.',
-      why:'Without a location, technicians cannot find the unit, and alarms from it cannot be linked to a room.',
-      rule:'Every piece of equipment must have a recorded location.', ruleId:'LOC-01',
-      proposal:{label:'Suggested location', value:'Mechanical Room 01'},
-      evidence:[
-        {kind:'Drawing', title:'Mechanical plan, level 6', strength:'Direct evidence', text:'The AHU-02 symbol is drawn inside the room labelled “Mechanical Room 01”. The supply duct leaves this room toward VAV-03.', fig:'mech'},
-        {kind:'Record', title:'Equipment schedule', strength:'Supporting', text:'Lists AHU-02 as an air handling unit serving level 6. The schedule has no location column, so it does not confirm the room.'}],
-      basis:'Based on the drawing. Not yet checked on site.',
-      question:'The drawing suggests AHU-02 is in Mechanical Room 01. Can you confirm this?',
-      answers:{yes:'Yes, I have seen it there', no:'No, it is somewhere else', unknown:'I don’t know'},
-      reasons:['Matches the mechanical plan', 'Confirmed during a site walk', 'Drawing is clear; site check not needed now'],
-      apply:eq => { eq.location = 'Mechanical Room 01'; eq.links.push(['located in', 'Mechanical Room 01']); },
-      newLink:['located in', 'Mechanical Room 01'], field:'location',
-      result:'Location updated: AHU-02 is in Mechanical Room 01.',
-      tech:{
-        query:'SELECT ?relation ?target WHERE {\n  ex:AHU-02 ?relation ?target .\n}',
-        rows:'ex:AHU-02  a               brick:AHU\nex:AHU-02  brick:feeds     ex:VAV-03\nex:AHU-02  brick:hasPoint  ex:AHU-02-SAT\n(no rec:locatedIn)',
-        shape:'ex:LOC-01  a sh:NodeShape ;\n  sh:targetClass brick:Equipment ;\n  sh:property [ sh:path rec:locatedIn ;\n    sh:minCount 1 ;\n    sh:message "Equipment has no recorded location" ] .',
-        report:'Conforms: False\nFocus node: ex:AHU-02\nPath: rec:locatedIn\nMessage: Equipment has no recorded location',
-        patch:'{ "add": [ { "@id": "ex:AHU-02",\n    "rec:locatedIn": { "@id": "ex:MechRoom-01" } } ],\n  "remove": [],\n  "rationale": "AHU-02 symbol lies inside Mechanical Room 01\n    on the level 6 mechanical plan." }',
-        fact:'ex:AHU-02 rec:locatedIn ex:MechRoom-01'}},
-    rat: {id:'Q-102', equip:'FCU-6F-10', title:'FCU-6F-10 has no return air temperature sensor on record.',
-      why:'Without it, the system cannot tell how warm the air coming back from room R6-08 is, so comfort complaints and faults cannot be checked.',
-      rule:'Every fan coil unit must have a return air temperature sensor.', ruleId:'PNT-01',
-      proposal:{label:'Suggested addition', value:'Return air temperature sensor, read through input AI-1 of the unit’s DFE controller'},
-      evidence:[
-        {kind:'Drawing', title:'Control drawing for the DFE controller', strength:'Direct evidence', text:'Shows one analog input (AI×1) for return air temperature, three outputs for fan speed and one output for the valve.', fig:'dfe'},
-        {kind:'Record', title:'Approved building record, version 1.0', strength:'Direct evidence', text:'The approved record lists this sensor for FCU-6F-10. It is missing from the current copy.'}],
-      basis:'Based on the control drawing and the approved record.',
-      question:'Do you see a return air temperature reading for FCU-6F-10 in the building management system?',
-      answers:{yes:'Yes, the reading is there', no:'No, there is no such reading', unknown:'I don’t know'},
-      reasons:['Matches the control drawing', 'Reading visible in the BMS', 'Restores the approved record'],
-      apply:eq => { eq.sensors.unshift('Return air temperature'); eq.links.push(['has sensor', 'Return air temperature sensor']); },
-      newLink:['has sensor', 'Return air temperature sensor'], field:'sensors',
-      result:'Sensor added: FCU-6F-10 now has its return air temperature sensor on record.',
-      tech:{
-        query:'SELECT ?relation ?target WHERE {\n  ex:FCU-6F-10 ?relation ?target .\n}',
-        rows:'ex:FCU-6F-10  a               brick:FCU\nex:FCU-6F-10  rec:locatedIn   ex:R6-08\nex:FCU-6F-10  brick:hasPoint  ex:FCU-6F-10-FSC\n(no return air temperature point)',
-        shape:'ex:PNT-01  a sh:NodeShape ;\n  sh:targetClass brick:FCU ;\n  sh:property [ sh:path brick:hasPoint ;\n    sh:qualifiedValueShape [ sh:class\n      brick:Return_Air_Temperature_Sensor ] ;\n    sh:qualifiedMinCount 1 ;\n    sh:message "FCU lacks a return air temperature point" ] .',
-        report:'Conforms: False\nFocus node: ex:FCU-6F-10\nPath: brick:hasPoint\nMessage: FCU lacks a return air temperature point',
-        patch:'{ "add": [\n    { "@id": "ex:FCU-6F-10",\n      "brick:hasPoint": { "@id": "ex:FCU-6F-10-RAT" } },\n    { "@id": "ex:FCU-6F-10-RAT",\n      "@type": "brick:Return_Air_Temperature_Sensor" } ],\n  "remove": [],\n  "rationale": "Control drawing shows AI x1 for\n    return air temperature." }',
-        fact:'ex:FCU-6F-10 brick:hasPoint ex:FCU-6F-10-RAT'}},
-  };
-  const T0 = now();
-  const R = {};
-  for (const k in IS) R[k] = {status:'open', answer:null, reason:'', decidedBy:null, trust:null, wo:null, checking:false,
-    history:[
-      {t:T0, by:'Rule check (simulated)', text:`Found a problem: ${IS[k].title.replace(/\.$/, '')} (rule ${IS[k].ruleId}).`},
-      {t:T0, by:'SGR (simulated)', text:`Proposed a correction from the evidence. Before showing it, checked that the corrected record passes rule ${IS[k].ruleId}.`}]};
-  return {EQ, IS, R, sel:'AHU-02', showConn:false};
+/* =================== the knowledge graph =================== */
+const L = v => '"' + String(v).replace(/"/g, "'") + '"';
+const isLit = o => o.startsWith('"');
+const unL = o => isLit(o) ? o.slice(1, -1) : o;
+class KG {
+  constructor(t) { this.t = t.map(x => [...x]); }
+  clone() { return new KG(this.t); }
+  match(s, p, o) { return this.t.filter(([a, b, c]) => (s == null || a === s) && (p == null || b === p) && (o == null || c === o)); }
+  obj(s, p) { return this.match(s, p, null).map(x => x[2]); }
+  subj(p, o) { return this.match(null, p, o).map(x => x[0]); }
+  has(s, p, o) { return this.match(s, p, o).length > 0; }
+  type(s) { return this.obj(s, 'a')[0]; }
+  label(s) { const l = this.obj(s, 'rdfs:label')[0]; return l ? unL(l) : s.replace(/^ex:/, ''); }
+  lit(s, p) { const v = this.obj(s, p)[0]; return v ? unL(v) : null; }
+  add(s, p, o) { if (!this.has(s, p, o)) this.t.push([s, p, o]); }
+  instances(classes) { return this.match(null, 'a', null).filter(x => classes.includes(x[2])).map(x => x[0]); }
 }
-let D = freshData();
-let woSeq = 1042;
+const CLASS = {
+  'brick:AHU':{label:'Air handling unit', kind:'equip', gl:'AHU'},
+  'brick:FCU':{label:'Fan coil unit', kind:'equip', gl:'FCU'},
+  'brick:VAV':{label:'VAV box (air terminal)', kind:'equip', gl:'VAV'},
+  'brick:Chiller':{label:'Chiller', kind:'equip', gl:'CH'},
+  'brick:Chilled_Water_System':{label:'Chilled water system', kind:'system', gl:'SYS'},
+  'brick:Return_Air_Temperature_Sensor':{label:'Return air temperature sensor', kind:'point', gl:'AI'},
+  'brick:Supply_Air_Temperature_Sensor':{label:'Supply air temperature sensor', kind:'point', gl:'AI'},
+  'brick:Air_Flow_Sensor':{label:'Airflow sensor', kind:'point', gl:'AI'},
+  'brick:Fan_Speed_Command':{label:'Fan speed command', kind:'point', gl:'DO'},
+  'brick:Start_Stop_Command':{label:'Start / stop command', kind:'point', gl:'DO'},
+  'rec:Building':{label:'Building', kind:'space', gl:'BLD'},
+  'rec:Level':{label:'Level', kind:'space', gl:'LV'},
+  'rec:Room':{label:'Room', kind:'space', gl:'RM'},
+  'rec:Office':{label:'Office', kind:'space', gl:'RM'},
+  'rec:HVACZone':{label:'HVAC zone', kind:'zone', gl:'Z'},
+  'ex:Document':{label:'Evidence document', kind:'doc'},
+  'prov:Activity':{label:'Review decision', kind:'prov'},
+  'prov:Agent':{label:'Reviewer', kind:'prov'},
+};
+const EQUIP = ['brick:AHU', 'brick:FCU', 'brick:VAV', 'brick:Chiller'];
+const KIND_STYLE = {equip:['var(--navy-2)', '#e4ecf7'], system:['#56677d', '#eceff3'], point:['#6a4fb3', '#efeafa'], space:['#9a5300', '#fbeedd'], zone:['#2a6fab', '#e3f0fa']};
+const POS = {'ex:BLDG':[930, 70], 'ex:RoofLevel':[560, 50], 'ex:L6':[930, 330], 'ex:CHWS':[105, 150], 'ex:CH-1':[210, 95], 'ex:CH-2':[210, 215], 'ex:CH-1-SS':[80, 45],
+  'ex:FCU-6F-10':[430, 215], 'ex:FCU-6F-10-FSC':[340, 320], 'ex:FCU-6F-10-RAT':[520, 320], 'ex:Z-R6-08':[640, 150], 'ex:R6-08':[790, 215],
+  'ex:MechRoom-01':[250, 390], 'ex:AHU-02':[250, 490], 'ex:AHU-02-SAT':[100, 490], 'ex:VAV-03':[520, 490], 'ex:VAV-03-AF':[620, 565], 'ex:R6-12':[790, 490]};
 
-/* ---------------- helpers ---------------- */
-const STATUS = {
-  open:['c-open', 'Needs review'], approved:['c-ok', 'Approved'], rejected:['c-rej', 'Correction rejected'], investigating:['c-inv', 'Under investigation'], none:['c-ok', 'No problems']};
-const statusOf = id => { const e = D.EQ[id]; return e.issue ? D.R[e.issue].status : 'none'; };
+function baseTriples() {
+  const T = [];
+  const n = (id, type, label, extra = []) => { T.push([id, 'a', type], [id, 'rdfs:label', L(label)]); for (const [p, o] of extra) T.push([id, p, o]); };
+  n('ex:BLDG', 'rec:Building', 'Research building');
+  n('ex:RoofLevel', 'rec:Level', 'Roof');
+  n('ex:L6', 'rec:Level', 'Level 6');
+  n('ex:R6-08', 'rec:Office', 'Room R6-08', [['ex:roomUse', L('Faculty office')], ['ex:areaSqm', L('25.2')], ['ex:origin', L('6F records')]]);
+  n('ex:R6-12', 'rec:Room', 'Room R6-12', [['ex:origin', L('example')]]);
+  n('ex:MechRoom-01', 'rec:Room', 'Mechanical Room 01', [['ex:origin', L('example')]]);
+  n('ex:Z-R6-08', 'rec:HVACZone', 'Zone of R6-08');
+  T.push(['ex:BLDG', 'brick:hasPart', 'ex:RoofLevel'], ['ex:BLDG', 'brick:hasPart', 'ex:L6'],
+         ['ex:L6', 'brick:hasPart', 'ex:R6-08'], ['ex:L6', 'brick:hasPart', 'ex:R6-12'], ['ex:L6', 'brick:hasPart', 'ex:MechRoom-01'],
+         ['ex:Z-R6-08', 'brick:hasPart', 'ex:R6-08']);
+  n('ex:CHWS', 'brick:Chilled_Water_System', 'Central chilled water system');
+  n('ex:CH-1', 'brick:Chiller', 'CH-1', [['ex:origin', L('6F records')], ['ex:source', L('Equipment schedule; system flow diagram')]]);
+  n('ex:CH-2', 'brick:Chiller', 'CH-2', [['ex:origin', L('6F records')], ['ex:source', L('Equipment schedule; system flow diagram')]]);
+  n('ex:CH-1-SS', 'brick:Start_Stop_Command', 'Start / stop command');
+  T.push(['ex:CHWS', 'brick:hasPart', 'ex:CH-1'], ['ex:CHWS', 'brick:hasPart', 'ex:CH-2'],
+         ['ex:CH-1', 'rec:locatedIn', 'ex:RoofLevel'], ['ex:CH-2', 'rec:locatedIn', 'ex:RoofLevel'], ['ex:CH-1', 'brick:hasPoint', 'ex:CH-1-SS'],
+         ['ex:CH-1', 'brick:feeds', 'ex:FCU-6F-10'], ['ex:CH-2', 'brick:feeds', 'ex:FCU-6F-10']);
+  n('ex:FCU-6F-10', 'brick:FCU', 'FCU-6F-10', [['ex:origin', L('6F records')], ['ex:source', L('6F HVAC plan; control drawings')]]);
+  n('ex:FCU-6F-10-FSC', 'brick:Fan_Speed_Command', 'Fan speed command (high / medium / low)');
+  T.push(['ex:FCU-6F-10', 'rec:locatedIn', 'ex:R6-08'], ['ex:FCU-6F-10', 'brick:feeds', 'ex:Z-R6-08'], ['ex:FCU-6F-10', 'brick:hasPoint', 'ex:FCU-6F-10-FSC']);
+  n('ex:AHU-02', 'brick:AHU', 'AHU-02', [['ex:origin', L('example')], ['ex:source', L('Equipment schedule (example)')]]);
+  n('ex:AHU-02-SAT', 'brick:Supply_Air_Temperature_Sensor', 'Supply air temperature sensor');
+  n('ex:VAV-03', 'brick:VAV', 'VAV-03', [['ex:origin', L('example')], ['ex:source', L('Equipment schedule (example)')]]);
+  n('ex:VAV-03-AF', 'brick:Air_Flow_Sensor', 'Airflow sensor');
+  T.push(['ex:AHU-02', 'brick:feeds', 'ex:VAV-03'], ['ex:AHU-02', 'brick:hasPoint', 'ex:AHU-02-SAT'],
+         ['ex:VAV-03', 'rec:locatedIn', 'ex:R6-12'], ['ex:VAV-03', 'brick:hasPoint', 'ex:VAV-03-AF']);
+  n('ex:doc-mech-plan', 'ex:Document', 'Mechanical plan, level 6 (example)');
+  n('ex:doc-schedule', 'ex:Document', 'Equipment schedule (example)');
+  n('ex:doc-dfe-drawing', 'ex:Document', 'Control drawing for the DFE controller of FCU-6F-10');
+  n('ex:doc-record-v1', 'ex:Document', 'Approved building record, version 1.0');
+  return T;
+}
+
+/* =================== rules (SHACL-style, run on the graph) =================== */
+const RULES = [
+  {id:'LOC-01', text:'Every piece of equipment must have a recorded location.', path:'rec:locatedIn', msg:'Equipment has no recorded location',
+   run:G => G.instances(EQUIP).filter(e => !G.obj(e, 'rec:locatedIn').length),
+   plain:(G, e) => `${G.label(e)} is missing its location.`,
+   why:'Without a location, technicians cannot find the unit, and alarms from it cannot be linked to a room.',
+   shape:'ex:LOC-01  a sh:NodeShape ;\n  sh:targetClass brick:Equipment ;\n  sh:property [ sh:path rec:locatedIn ;\n    sh:minCount 1 ;\n    sh:message "Equipment has no recorded location" ] .'},
+  {id:'PNT-01', text:'Every fan coil unit must have a return air temperature sensor.', path:'brick:hasPoint', msg:'FCU lacks a return air temperature point',
+   run:G => G.instances(['brick:FCU']).filter(f => !G.obj(f, 'brick:hasPoint').some(p => G.type(p) === 'brick:Return_Air_Temperature_Sensor')),
+   plain:(G, e) => `${G.label(e)} has no return air temperature sensor on record.`,
+   why:'Without it, the system cannot tell how warm the air coming back from the room is, so comfort complaints and faults cannot be checked.',
+   shape:'ex:PNT-01  a sh:NodeShape ;\n  sh:targetClass brick:FCU ;\n  sh:property [ sh:path brick:hasPoint ;\n    sh:qualifiedValueShape [ sh:class\n      brick:Return_Air_Temperature_Sensor ] ;\n    sh:qualifiedMinCount 1 ;\n    sh:message "FCU lacks a return air temperature point" ] .'},
+  {id:'AIR-01', text:'Every VAV box must be supplied by an air handling unit.', path:'^brick:feeds', msg:'VAV box has no air supply',
+   run:G => G.instances(['brick:VAV']).filter(v => !G.subj('brick:feeds', v).some(s => G.type(s) === 'brick:AHU')),
+   plain:(G, e) => `${G.label(e)} has no air supply on record.`, why:'', shape:''},
+];
+function validate(G) {
+  const out = [];
+  for (const r of RULES) for (const f of r.run(G)) out.push({rule:r.id, focus:f, key:r.id + '|' + f});
+  return out;
+}
+const ruleById = id => RULES.find(r => r.id === id);
+
+/* =================== proposals (scripted SGR) =================== */
+const PROPOSALS = {
+  'LOC-01|ex:AHU-02': {id:'Q-101', label:'Suggested location', value:'Mechanical Room 01',
+    add:[['ex:AHU-02', 'rec:locatedIn', 'ex:MechRoom-01']], used:['ex:doc-mech-plan', 'ex:doc-schedule'],
+    evidence:[
+      {kind:'Drawing', title:'Mechanical plan, level 6', strength:'Direct evidence', text:'The AHU-02 symbol is drawn inside the room labelled “Mechanical Room 01”. The supply duct leaves this room toward VAV-03.', fig:'mech'},
+      {kind:'Record', title:'Equipment schedule', strength:'Supporting', text:'Lists AHU-02 as an air handling unit serving level 6. The schedule has no location column, so it does not confirm the room.'}],
+    basis:'Based on the drawing. Not yet checked on site.',
+    question:'The drawing suggests AHU-02 is in Mechanical Room 01. Can you confirm this?',
+    answers:{yes:'Yes, I have seen it there', no:'No, it is somewhere else', unknown:'I don’t know'},
+    reasons:['Matches the mechanical plan', 'Confirmed during a site walk', 'Drawing is clear; site check not needed now'],
+    result:'Location updated: AHU-02 is in Mechanical Room 01.', field:'location',
+    rationale:'AHU-02 symbol lies inside Mechanical Room 01 on the level 6 mechanical plan.'},
+  'PNT-01|ex:FCU-6F-10': {id:'Q-102', label:'Suggested addition', value:'Return air temperature sensor, read through input AI-1 of the unit’s DFE controller',
+    add:[['ex:FCU-6F-10', 'brick:hasPoint', 'ex:FCU-6F-10-RAT'], ['ex:FCU-6F-10-RAT', 'a', 'brick:Return_Air_Temperature_Sensor'], ['ex:FCU-6F-10-RAT', 'rdfs:label', L('Return air temperature sensor')]],
+    used:['ex:doc-dfe-drawing', 'ex:doc-record-v1'],
+    evidence:[
+      {kind:'Drawing', title:'Control drawing for the DFE controller', strength:'Direct evidence', text:'Shows one analog input (AI×1) for return air temperature, three outputs for fan speed and one output for the valve.', fig:'dfe'},
+      {kind:'Record', title:'Approved building record, version 1.0', strength:'Direct evidence', text:'The approved record lists this sensor for FCU-6F-10. It is missing from the current copy.'}],
+    basis:'Based on the control drawing and the approved record.',
+    question:'Do you see a return air temperature reading for FCU-6F-10 in the building management system?',
+    answers:{yes:'Yes, the reading is there', no:'No, there is no such reading', unknown:'I don’t know'},
+    reasons:['Matches the control drawing', 'Reading visible in the BMS', 'Restores the approved record'],
+    result:'Sensor added: FCU-6F-10 now has its return air temperature sensor on record.', field:'sensors',
+    rationale:'Control drawing shows AI x1 for return air temperature.'},
+};
+
+/* =================== state =================== */
+let S, woSeq = 1042;
+function fresh() {
+  const G = new KG(baseTriples());
+  const reviews = {};
+  const t = now();
+  for (const v of validate(G)) {
+    const P = PROPOSALS[v.key], r = ruleById(v.rule);
+    reviews[v.key] = {status:'open', answer:null, reason:'', decidedBy:null, trust:null, wo:null, checking:false, added:[],
+      history:[{t, by:'Rule check (in this page)', text:`Found a problem: ${r.plain(G, v.focus).replace(/\.$/, '')} (rule ${v.rule}).`}]
+        .concat(P ? [{t, by:'SGR (simulated)', text:`Proposed a correction from the evidence. Before showing it, checked that the corrected graph passes rule ${v.rule}.`}] : [])};
+  }
+  S = {G, reviews, sel:'ex:AHU-02', node:'ex:AHU-02', showConn:false, tab:'review', labels:true};
+}
+const equipList = () => S.G.instances(EQUIP);
+function issueFor(eq) {
+  const v = validate(S.G).find(x => x.focus === eq);
+  if (v) return {key:v.key, rule:v.rule, live:true};
+  const k = Object.keys(S.reviews).find(k => k.endsWith('|' + eq));
+  return k ? {key:k, rule:k.split('|')[0], live:false} : null;
+}
+const STATUS = {open:['c-open', 'Needs review'], approved:['c-ok', 'Approved'], rejected:['c-rej', 'Correction rejected'], investigating:['c-inv', 'Under investigation'], none:['c-ok', 'No problems'], noprop:['c-open', 'Needs a person']};
 const chip = st => `<span class="chip ${STATUS[st][0]}">${STATUS[st][1]}</span>`;
-function curStep() {
-  const e = D.EQ[D.sel]; if (!e.issue) return {now:1, na:true};
-  const r = D.R[e.issue];
-  return r.status === 'open' ? {now:4} : {now:5};
+function statusOf(eq) { const i = issueFor(eq); if (!i) return 'none'; const r = S.reviews[i.key]; return r ? r.status : 'noprop'; }
+const plainId = id => id.replace(/^ex:/, '');
+const who = () => ($('#who').value || '').trim() || 'Demo operator';
+
+/* =================== plain-language reading of the graph =================== */
+function relPlain(s, p, o) {
+  const ts = S.G.type(s), to = S.G.type(o);
+  if (p === 'brick:feeds') {
+    if (ts === 'brick:Chiller') return 'supplies chilled water to';
+    if (ts === 'brick:AHU') return 'supplies air to';
+    if (to === 'rec:HVACZone') return 'serves';
+    return 'supplies';
+  }
+  return {'rec:locatedIn':'located in', 'brick:hasPoint':'has', 'brick:hasPart':'contains', 'a':'is a'}[p] || p;
+}
+function inPlain(s, p, o) {
+  if (p === 'brick:feeds') { const ts = S.G.type(s); return ts === 'brick:Chiller' ? 'receives chilled water from' : ts === 'brick:AHU' ? 'receives air from' : 'is supplied by'; }
+  if (p === 'brick:hasPart') return 'part of';
+  if (p === 'rec:locatedIn') return 'contains';
+  return p;
+}
+function placeText(room) {
+  const G = S.G; if (!room) return null;
+  const use = G.lit(room, 'ex:roomUse'), area = G.lit(room, 'ex:areaSqm');
+  return G.label(room) + (use ? ` (${use.toLowerCase()}${area ? ', ' + area + ' m²' : ''})` : '');
 }
 
-/* ---------------- render: steps ---------------- */
-const STEP_LABELS = ['Select equipment', 'See the problem', 'Review the correction', 'Decide', 'See the result'];
-function renderSteps() {
-  const s = curStep();
-  $('#steps').innerHTML = STEP_LABELS.map((l, i) => {
-    const n = i + 1; let cls = '';
-    if (s.na && n > 1) cls = 'na'; else if (n < s.now) cls = 'done'; else if (n === s.now) cls = 'now';
-    if (s.now === 5 && n === 5) cls = 'done now';
-    return `<button type="button" class="${cls}" data-go="s${n}"><i>${cls.includes('done') && !cls.includes('now') ? '✓' : n}</i>${l}</button>`;
-  }).join('');
-  document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => { const t = document.getElementById(b.dataset.go); if (t) t.scrollIntoView({behavior:reduce ? 'auto' : 'smooth', block:'start'}); }));
-}
-
-/* ---------------- render: list ---------------- */
-function renderList() {
-  const ids = Object.keys(D.EQ);
-  $('#list').innerHTML = ids.map(id => { const e = D.EQ[id]; return `<li><button type="button" data-eq="${id}" aria-current="${id === D.sel}"><b>${id}</b>${chip(statusOf(id))}<small>${esc(e.type)}${e.demo ? ' · example' : ''}</small></button></li>`; }).join('');
-  document.querySelectorAll('[data-eq]').forEach(b => b.addEventListener('click', () => select(b.dataset.eq)));
-  const open = ids.filter(id => statusOf(id) === 'open').length;
-  $('#openCount').textContent = open ? `${open} to review` : 'All reviewed';
-}
-
-/* ---------------- figures ---------------- */
+/* =================== figures =================== */
 const FIG = {
   mech:`<svg viewBox="0 0 560 210" role="img" aria-label="Plan excerpt: AHU-02 drawn inside Mechanical Room 01, with a duct leaving toward VAV-03">
-    <rect class="dr-room" x="20" y="20" width="250" height="170"/>
-    <text class="dr-txt" x="34" y="44">MECHANICAL ROOM 01</text>
-    <rect class="dr-room" x="270" y="20" width="270" height="170" style="fill:#fff"/>
-    <text class="dr-sm" x="284" y="44">CORRIDOR / ROOM R6-12</text>
-    <rect class="dr-eq" x="80" y="80" width="110" height="64"/>
-    <text class="dr-txt" x="135" y="116" text-anchor="middle">AHU-02</text>
+    <rect class="dr-room" x="20" y="20" width="250" height="170"/><text class="dr-txt" x="34" y="44">MECHANICAL ROOM 01</text>
+    <rect class="dr-room" x="270" y="20" width="270" height="170" style="fill:#fff"/><text class="dr-sm" x="284" y="44">CORRIDOR / ROOM R6-12</text>
+    <rect class="dr-eq" x="80" y="80" width="110" height="64"/><text class="dr-txt" x="135" y="116" text-anchor="middle">AHU-02</text>
     <rect class="dr-hl" x="70" y="70" width="130" height="84" rx="6"/>
-    <path class="dr-duct" d="M190 112 H330 V150 H470"/>
-    <rect class="dr-eq" x="470" y="136" width="52" height="28"/>
-    <text class="dr-sm" x="496" y="154" text-anchor="middle">VAV-03</text>
+    <path class="dr-duct" d="M190 112 H330 V150 H470"/><rect class="dr-eq" x="470" y="136" width="52" height="28"/><text class="dr-sm" x="496" y="154" text-anchor="middle">VAV-03</text>
   </svg><figcaption>Illustrative excerpt for this demo, not a real drawing. The highlighted symbol is AHU-02.</figcaption>`,
   dfe:`<svg viewBox="0 0 560 190" role="img" aria-label="Controller terminals: AI-1 return air temperature, DO-1 to DO-3 fan speed, DO-4 valve">
-    <rect class="dr-eq" x="20" y="20" width="160" height="150"/>
-    <text class="dr-txt" x="100" y="44" text-anchor="middle">DFE controller</text>
+    <rect class="dr-eq" x="20" y="20" width="160" height="150"/><text class="dr-txt" x="100" y="44" text-anchor="middle">DFE controller</text>
     <text class="dr-sm" x="40" y="80">AI-1</text><text class="dr-sm" x="40" y="108">DO-1..3</text><text class="dr-sm" x="40" y="136">DO-4</text>
     <path class="dr-duct" d="M180 76 H300" style="stroke:#e29400"/><text class="dr-sm" x="310" y="80" style="fill:#7a4500;font-weight:600">Return air temperature sensor</text>
     <rect class="dr-hl" x="30" y="64" width="510" height="24" rx="5"/>
@@ -362,92 +502,116 @@ const FIG = {
   </svg><figcaption>Schematic of the documented I/O (AI×1, DO×3, DO×1). Terminal names are illustrative.</figcaption>`,
 };
 
-/* ---------------- connections view ---------------- */
-function connSvg(id, issueKey) {
-  const e = D.EQ[id], r = issueKey ? D.R[issueKey] : null, I = issueKey ? D.IS[issueKey] : null;
-  const links = e.links.map(l => ({rel:l[0], to:l[1], kind: I && r.status === 'approved' && l[0] === I.newLink[0] && l[1] === I.newLink[1] ? 'new' : ''}));
-  if (I && r.status === 'open') links.push({rel:I.newLink[0], to:I.newLink[1], kind:'prop'});
+/* =================== review tab =================== */
+const STEP_LABELS = ['Select equipment', 'See the problem', 'Review the correction', 'Decide', 'See the result'];
+function renderSteps() {
+  const i = issueFor(S.sel), r = i && S.reviews[i.key];
+  const nowStep = !i ? 1 : (r && r.status === 'open') ? 4 : 5, na = !i;
+  $('#steps').innerHTML = STEP_LABELS.map((l, k) => {
+    const n = k + 1; let cls = '';
+    if (na && n > 1) cls = 'na'; else if (n < nowStep) cls = 'done'; else if (n === nowStep) cls = 'now';
+    return `<button type="button" class="${cls}" data-go="s${n}"><i>${cls === 'done' ? '✓' : n}</i>${l}</button>`;
+  }).join('');
+  document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => { const t = document.getElementById(b.dataset.go); if (t) t.scrollIntoView({behavior:reduce ? 'auto' : 'smooth', block:'start'}); }));
+}
+function renderList() {
+  const ids = equipList();
+  $('#list').innerHTML = ids.map(id => `<li><button type="button" data-eq="${id}" aria-current="${id === S.sel}"><b>${esc(S.G.label(id))}</b>${chip(statusOf(id))}<small>${esc(CLASS[S.G.type(id)].label)}${S.G.lit(id, 'ex:origin') === 'example' ? ' · example' : ''}</small></button></li>`).join('');
+  document.querySelectorAll('[data-eq]').forEach(b => b.addEventListener('click', () => select(b.dataset.eq)));
+  const open = ids.filter(id => ['open', 'noprop'].includes(statusOf(id))).length;
+  $('#openCount').textContent = open ? `${open} to review` : 'All reviewed';
+}
+function connSvg(id) {
+  const G = S.G, i = issueFor(id), r = i && S.reviews[i.key], P = i && PROPOSALS[i.key];
+  const addedKeys = new Set((r && r.status === 'approved' ? P.add : []).map(t => t.join('|')));
+  const links = [];
+  for (const [s, p, o] of G.match(id, null, null)) if (['brick:feeds', 'rec:locatedIn', 'brick:hasPoint'].includes(p)) links.push({rel:relPlain(s, p, o), to:G.label(o), kind:addedKeys.has([s, p, o].join('|')) ? 'new' : ''});
+  for (const [s, p] of G.match(null, null, id)) if (['brick:feeds', 'brick:hasPart'].includes(p) && CLASS[G.type(s)].kind !== 'space') links.push({rel:inPlain(s, p, id), to:G.label(s), kind:''});
+  if (r && r.status === 'open' && P) for (const [s, p, o] of P.add) if (s === id && p !== 'a') links.push({rel:relPlain(s, p, o), to:o === 'ex:FCU-6F-10-RAT' ? 'Return air temperature sensor' : G.label(o), kind:'prop'});
   const h = Math.max(140, links.length * 50 + 30), cy = h / 2;
-  let s = `<svg viewBox="0 0 640 ${h}" role="img" aria-label="Connections of ${id}">`;
-  links.forEach((l, i) => {
-    const y = 30 + i * 50 + 10;
+  let s = `<svg viewBox="0 0 640 ${h}" role="img" aria-label="Connections of ${esc(G.label(id))}">`;
+  links.forEach((l, k) => {
+    const y = 40 + k * 50;
     s += `<path class="cl ${l.kind}" d="M170 ${cy} C 260 ${cy}, 300 ${y}, 420 ${y}"/>`;
     s += `<text class="clt ${l.kind}" x="300" y="${(cy + y) / 2 - 6}" text-anchor="middle">${esc(l.rel)}${l.kind === 'prop' ? ' (proposed)' : l.kind === 'new' ? ' ✓' : ''}</text>`;
     s += `<g class="cn"><rect x="420" y="${y - 16}" width="200" height="32" rx="6"${l.kind === 'prop' ? ' style="stroke:var(--teal);stroke-dasharray:5 3"' : l.kind === 'new' ? ' style="stroke:var(--ok);stroke-width:2"' : ''}/><text x="520" y="${y}">${esc(l.to.length > 26 ? l.to.slice(0, 25) + '…' : l.to)}</text></g>`;
   });
-  s += `<g class="cn center"><rect x="20" y="${cy - 20}" width="150" height="40" rx="8"/><text x="95" y="${cy}">${esc(id)}</text></g></svg>`;
-  return s;
+  return s + `<g class="cn center"><rect x="20" y="${cy - 20}" width="150" height="40" rx="8"/><text x="95" y="${cy}">${esc(G.label(id))}</text></g></svg>`;
 }
-
-/* ---------------- render: thread ---------------- */
 function renderThread() {
-  const id = D.sel, e = D.EQ[id], k = e.issue, I = k ? D.IS[k] : null, r = k ? D.R[k] : null;
-  let h = '';
-  // 1. equipment
-  const locVal = e.location ? esc(e.location) + (k === 'loc' && r.status === 'approved' ? ` <span class="upd">${chip('approved')}<span class="small">${esc(r.trust)}</span></span>` : '') : '<span class="missing">⚠ Missing</span>';
-  const sensors = e.sensors.map((x, i) => esc(x) + (k === 'rat' && r.status === 'approved' && i === 0 ? ` <span class="upd">${chip('approved')}<span class="small">${esc(r.trust)}</span></span>` : '')).join('<br>');
-  const missingSensor = k === 'rat' && r.status !== 'approved' ? '<br><span class="missing">⚠ Return air temperature sensor missing</span>' : '';
-  const conns = e.links.filter(l => l[0] !== 'located in' && l[0] !== 'has sensor').map(l => `${esc(l[0][0].toUpperCase() + l[0].slice(1))} ${esc(l[1])}`).join('<br>');
-  h += `<section class="card" id="s1"><header><span class="n">1</span><h3>Equipment</h3><span class="sp"></span>${e.demo ? '<span class="chip c-demo">example data</span>' : '<span class="chip c-doc">from the 6F records</span>'}</header>
-    <div class="eqname">${esc(id)}</div>
-    <dl class="kv"><dt>Type</dt><dd>${esc(e.type)}</dd><dt>Location</dt><dd>${locVal}</dd><dt>Connected to</dt><dd>${conns || '—'}</dd><dt>Sensors and controls</dt><dd>${sensors}${missingSensor}</dd><dt>Information from</dt><dd>${esc(e.sources)}</dd></dl>
-    <div><button type="button" class="linkbtn" id="connBtn" aria-expanded="${D.showConn}">${D.showConn ? 'Hide connections' : 'Show connections'}</button></div>
-    ${D.showConn ? `<div class="conn">${connSvg(id, k)}</div><p class="hint">Optional view of the stored links. A dashed line is a proposed link that is not saved yet.</p>` : ''}
+  const G = S.G, id = S.sel, i = issueFor(id), r = i && S.reviews[i.key], P = i && PROPOSALS[i.key], rule = i && ruleById(i.rule);
+  const approved = r && r.status === 'approved';
+  const appr = f => approved && P.field === f ? ` <span class="upd">${chip('approved')}<span class="small">${esc(r.trust)}</span></span>` : '';
+  const loc = G.obj(id, 'rec:locatedIn')[0];
+  const out = G.match(id, 'brick:feeds', null).map(([s, p, o]) => `${relPlain(s, p, o)} ${G.label(o)}`);
+  const inc = G.match(null, 'brick:feeds', id).map(([s, p]) => `${inPlain(s, p, id)} ${G.label(s)}`);
+  const parts = G.match(null, 'brick:hasPart', id).filter(([s]) => CLASS[G.type(s)].kind === 'system').map(([s]) => `part of ${G.label(s)}`);
+  const conns = [...out, ...inc, ...parts].map(t => esc(t[0].toUpperCase() + t.slice(1))).join('<br>');
+  const pts = G.obj(id, 'brick:hasPoint').map(p => esc(G.label(p)) + (approved && P.field === 'sensors' && G.type(p) === 'brick:Return_Air_Temperature_Sensor' ? appr('sensors') : '')).join('<br>');
+  const missingPt = i && i.rule === 'PNT-01' && i.live ? '<br><span class="missing">⚠ Return air temperature sensor missing</span>' : '';
+  const origin = G.lit(id, 'ex:origin');
+  let h = `<section class="card" id="s1"><header><span class="n">1</span><h3>Equipment</h3><span class="sp"></span>${origin === 'example' ? '<span class="chip c-demo">example data</span>' : '<span class="chip c-doc">from the 6F records</span>'}</header>
+    <div class="eqname">${esc(G.label(id))}</div>
+    <dl class="kv"><dt>Type</dt><dd>${esc(CLASS[G.type(id)].label)}</dd>
+      <dt>Location</dt><dd>${loc ? esc(placeText(loc)) + appr('location') : '<span class="missing">⚠ Missing</span>'}</dd>
+      <dt>Connected to</dt><dd>${conns || '—'}</dd>
+      <dt>Sensors and controls</dt><dd>${pts || '—'}${missingPt}</dd>
+      <dt>Information from</dt><dd>${esc(G.lit(id, 'ex:source') || '—')}</dd></dl>
+    <div><button type="button" class="linkbtn" id="connBtn" aria-expanded="${S.showConn}">${S.showConn ? 'Hide connections' : 'Show connections'}</button> · <button type="button" class="linkbtn" id="toGraph">See it in the knowledge graph</button></div>
+    ${S.showConn ? `<div class="conn">${connSvg(id)}</div><p class="hint">Optional view of the stored links. A dashed line is a proposed link that is not saved yet.</p>` : ''}
   </section>`;
-  if (!I) {
-    h += `<section class="card" id="s2"><header><span class="n">2</span><h3>Problems</h3></header><p class="msg ok">No problems found. ${esc(id)} passes every rule check.</p><p class="hint">Pick an item marked “Needs review” in the list to try the review steps.</p></section>`;
+  if (!i) {
+    h += `<section class="card" id="s2"><header><span class="n">2</span><h3>Problems</h3></header><p class="msg ok">No problems found. ${esc(G.label(id))} passes every rule check.</p><p class="hint">Pick an item marked “Needs review” in the list to try the review steps.</p></section>`;
     $('#thread').innerHTML = h; bindThread(); return;
   }
-  // 2. problem
-  const solved = r.status === 'approved';
-  h += `<section class="card problem ${solved ? 'solved' : ''}" id="s2"><header><span class="n">2</span><h3>Problem</h3><span class="sp"></span>${chip(r.status)}<span class="chip c-simu">found by rule check · simulated</span></header>
-    <p class="title">${esc(I.title)}</p><p>${esc(I.why)}</p>
-    <div class="rule"><b>Rule ${I.ruleId}:</b> ${esc(I.rule)}</div></section>`;
-  // 3. proposal
-  h += `<section class="card prop ${solved ? 'accepted' : ''}" id="s3"><header><span class="n">3</span><h3>Proposed correction</h3><span class="sp"></span><span class="chip c-simu">proposed by SGR · simulated</span></header>
-    <p class="small">${esc(I.proposal.label)}</p><p class="value">${solved ? '✓ ' : ''}${esc(I.proposal.value)}</p>
-    <p class="small">${esc(I.basis)} Checked before you saw it: the corrected record passes rule ${I.ruleId}.</p>
-    <div class="ev">${I.evidence.map(ev => `<div class="evi"><span><span class="k">${ev.kind}</span><br><b>${esc(ev.title)}</b></span><span class="chip ${ev.strength.startsWith('Direct') ? 'c-doc' : 'c-rej'}">${ev.strength}</span><p>${esc(ev.text)}</p>${ev.fig ? `<figure>${FIG[ev.fig]}</figure>` : ''}</div>`).join('')}</div>
+  h += `<section class="card problem ${approved ? 'solved' : ''}" id="s2"><header><span class="n">2</span><h3>Problem</h3><span class="sp"></span>${chip(r ? r.status : 'noprop')}<span class="chip c-simu">found by a rule check on the graph</span></header>
+    <p class="title">${esc(rule.plain(G, id))}${approved ? ' <span class="small">(fixed)</span>' : ''}</p>${rule.why ? `<p>${esc(rule.why)}</p>` : ''}
+    <div class="rule"><b>Rule ${rule.id}:</b> ${esc(rule.text)}</div></section>`;
+  if (!P) {
+    h += `<section class="card" id="s3"><header><span class="n">3</span><h3>Proposed correction</h3></header><p class="msg warn">No correction could be proposed from the available evidence, so nothing is suggested. A person needs to check this on site.</p></section>`;
+    $('#thread').innerHTML = h; bindThread(); return;
+  }
+  h += `<section class="card prop ${approved ? 'accepted' : ''}" id="s3"><header><span class="n">3</span><h3>Proposed correction</h3><span class="sp"></span><span class="chip c-simu">proposed by SGR · simulated</span></header>
+    <p class="small">${esc(P.label)}</p><p class="value">${approved ? '✓ ' : ''}${esc(P.value)}</p>
+    <p class="small">${esc(P.basis)} Checked before you saw it: the corrected graph passes rule ${rule.id}.</p>
+    <div class="ev">${P.evidence.map(ev => `<div class="evi"><span><span class="k">${ev.kind}</span><br><b>${esc(ev.title)}</b></span><span class="chip ${ev.strength.startsWith('Direct') ? 'c-doc' : 'c-rej'}">${ev.strength}</span><p>${esc(ev.text)}</p>${ev.fig ? `<figure>${FIG[ev.fig]}</figure>` : ''}</div>`).join('')}</div>
   </section>`;
-  // 4. question + decision
   if (r.status === 'open') {
-    const a = r.answer;
-    const blocked = a === 'no';
+    const a = r.answer, blocked = a === 'no';
     h += `<section class="card ask" id="s4"><header><span class="n">4</span><h3>Your review</h3></header>
-      <p class="q">${esc(I.question)}</p>
-      <div class="answers" role="radiogroup" aria-label="Your answer">${Object.entries(I.answers).map(([key, lab]) => `<label class="${a === key ? 'sel' : ''}" for="ans-${key}"><input type="radio" name="ans" id="ans-${key}" value="${key}" ${a === key ? 'checked' : ''}>${esc(lab)}</label>`).join('')}</div>
+      <p class="q">${esc(P.question)}</p>
+      <div class="answers" role="radiogroup" aria-label="Your answer">${Object.entries(P.answers).map(([k, lab]) => `<label class="${a === k ? 'sel' : ''}" for="ans-${k}"><input type="radio" name="ans" id="ans-${k}" value="${k}" ${a === k ? 'checked' : ''}>${esc(lab)}</label>`).join('')}</div>
       ${blocked ? '<p class="msg warn">Your answer disagrees with the evidence, so this correction cannot be approved. Reject it or send it for investigation.</p>' : a === 'unknown' ? '<p class="msg info">That is fine. If you approve, the record will say this correction is based on the evidence shown and was not confirmed on site.</p>' : ''}
       <label class="field" for="reason">Reason for your decision (saved with your name)
         <textarea id="reason" placeholder="For example: matches the mechanical plan">${esc(r.reason)}</textarea></label>
-      <div class="quick">${I.reasons.map(q => `<button type="button" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+      <div class="quick">${P.reasons.map(q => `<button type="button" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
       <div class="decide">
         <button class="btn ok" type="button" id="approve" ${!a || blocked || !r.reason.trim() || r.checking ? 'disabled' : ''}>${r.checking ? 'Checking the change…' : '✓ Approve correction'}</button>
         <button class="btn no" type="button" id="reject" ${!a || !r.reason.trim() || r.checking ? 'disabled' : ''}>✕ Reject</button>
         <button class="btn inv" type="button" id="investigate" ${r.checking ? 'disabled' : ''}>⚑ Request further investigation</button>
       </div>
       <p class="hint" id="whyDisabled">${!a ? 'Answer the question first. “I don’t know” is a valid answer.' : !r.reason.trim() && !blocked ? 'Add a short reason to approve or reject.' : ''}</p>
-      <ul class="rules"><li>Your answer is saved next to the evidence. On its own it does not make the correction trusted.</li><li>Approved changes are checked again by the system before they are saved.</li><li>“Request further investigation” changes nothing and creates a site check.</li></ul>
+      <ul class="rules"><li>Your answer is saved next to the evidence. On its own it does not make the correction trusted.</li><li>Approved changes are checked again against every rule before they are written to the graph.</li><li>“Request further investigation” changes nothing and creates a site check.</li></ul>
     </section>`;
   } else {
     h += `<section class="card ask" id="s4"><header><span class="n">4</span><h3>Your review</h3><span class="sp"></span>${chip(r.status)}</header>
-      <dl class="kv"><dt>Question</dt><dd>${esc(I.question)}</dd><dt>Answer</dt><dd>${r.answer ? esc(I.answers[r.answer]) : 'Not answered'}</dd><dt>Decision</dt><dd>${STATUS[r.status][1]} by ${esc(r.decidedBy)}</dd><dt>Reason</dt><dd>${esc(r.reason || '—')}</dd></dl></section>`;
+      <dl class="kv"><dt>Question</dt><dd>${esc(P.question)}</dd><dt>Answer</dt><dd>${r.answer ? esc(P.answers[r.answer]) : 'Not answered'}</dd><dt>Decision</dt><dd>${STATUS[r.status][1]} by ${esc(r.decidedBy)}</dd><dt>Reason</dt><dd>${esc(r.reason || '—')}</dd></dl></section>`;
   }
-  // 5. result + history
-  let res = '<p class="empty">No decision yet. The record has not changed.</p>';
-  if (r.status === 'approved') res = `<p class="result ok">✓ ${esc(I.result)}</p><p class="small">Approved by ${esc(r.decidedBy)}. ${esc(r.trust)}.</p>`;
-  if (r.status === 'rejected') res = `<p class="result rej">Correction not applied.</p><p class="small">The problem stays open. SGR would look for other evidence before proposing again (simulated).</p>`;
-  if (r.status === 'investigating') res = `<p class="result inv">⚑ Sent for a site check: work order ${r.wo}</p><p class="small">The record has not changed. The problem stays open until the check is done (simulated work order).</p>`;
+  let res = '<p class="empty">No decision yet. The graph has not changed.</p>';
+  if (approved) res = `<p class="result ok">✓ ${esc(P.result)}</p><p class="small">Approved by ${esc(r.decidedBy)}. ${esc(r.trust)}. ${r.added.length} triple${r.added.length === 1 ? '' : 's'} written to the knowledge graph, plus a decision record.</p>`;
+  if (r.status === 'rejected') res = `<p class="result rej">Correction not applied.</p><p class="small">The problem stays open. SGR would look for other evidence before proposing again (simulated). The rejection is recorded in the graph.</p>`;
+  if (r.status === 'investigating') res = `<p class="result inv">⚑ Sent for a site check: work order ${r.wo}</p><p class="small">The building information has not changed. The problem stays open until the check is done (simulated work order).</p>`;
   h += `<section class="card" id="s5"><header><span class="n">5</span><h3>Result and history</h3></header>${res}
     <ol class="hist">${r.history.slice().reverse().map(x => `<li><time>${x.t}</time><div><b>${esc(x.text)}</b><div class="by">${esc(x.by)}</div></div></li>`).join('')}</ol></section>`;
   $('#thread').innerHTML = h;
   bindThread();
 }
 function bindThread() {
-  const k = D.EQ[D.sel].issue, r = k ? D.R[k] : null;
-  const cb = $('#connBtn'); if (cb) cb.addEventListener('click', () => { D.showConn = !D.showConn; renderThread(); });
-  if (!r || r.status !== 'open') return;
-  document.querySelectorAll('input[name="ans"]').forEach(i => i.addEventListener('change', () => {
-    r.answer = i.value; renderAll(); }));
+  const cb = $('#connBtn'); if (cb) cb.addEventListener('click', () => { S.showConn = !S.showConn; renderThread(); });
+  const tg = $('#toGraph'); if (tg) tg.addEventListener('click', () => { S.node = S.sel; setTab('graph'); });
+  const i = issueFor(S.sel), r = i && S.reviews[i.key];
+  if (!r || r.status !== 'open' || !$('#reason')) return;
+  document.querySelectorAll('input[name="ans"]').forEach(x => x.addEventListener('change', () => { r.answer = x.value; renderAll(); }));
   const ta = $('#reason');
   ta.addEventListener('input', () => { r.reason = ta.value; updateButtons(); });
   document.querySelectorAll('[data-q]').forEach(b => b.addEventListener('click', () => { r.reason = b.dataset.q; ta.value = r.reason; updateButtons(); }));
@@ -456,93 +620,221 @@ function bindThread() {
   $('#investigate').addEventListener('click', () => decide('investigating'));
 }
 function updateButtons() {
-  const k = D.EQ[D.sel].issue, r = D.R[k], a = r.answer, has = !!r.reason.trim();
+  const i = issueFor(S.sel), r = S.reviews[i.key], a = r.answer, has = !!r.reason.trim();
   $('#approve').disabled = !a || a === 'no' || !has;
   $('#reject').disabled = !a || !has;
   $('#whyDisabled').textContent = !a ? 'Answer the question first. “I don’t know” is a valid answer.' : !has && a !== 'no' ? 'Add a short reason to approve or reject.' : '';
 }
-const who = () => ($('#who').value || '').trim() || 'Demo operator';
 
-/* ---------------- decisions ---------------- */
+/* =================== decisions write to the graph =================== */
+function recordDecision(key, outcome, extra = []) {
+  const r = S.reviews[key], P = PROPOSALS[key], act = `ex:review-${P.id}`, agent = 'ex:reviewer-' + r.decidedBy.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const G = S.G;
+  G.add(agent, 'a', 'prov:Agent'); G.add(agent, 'rdfs:label', L(r.decidedBy));
+  for (const t of G.match(act, null, null)) G.t.splice(G.t.indexOf(t), 1);
+  G.add(act, 'a', 'prov:Activity'); G.add(act, 'rdfs:label', L(`Review of ${P.id}`));
+  G.add(act, 'ex:outcome', L(outcome)); G.add(act, 'prov:wasAssociatedWith', agent); G.add(act, 'prov:endedAtTime', L(stamp()));
+  if (r.answer) G.add(act, 'ex:reviewerAnswer', L(P.answers[r.answer]));
+  if (r.reason.trim()) G.add(act, 'ex:reason', L(r.reason.trim()));
+  for (const u of P.used) G.add(act, 'prov:used', u);
+  for (const [p, o] of extra) G.add(act, p, o);
+}
 function decide(kind) {
-  const k = D.EQ[D.sel].issue, r = D.R[k], I = D.IS[k];
-  const logAnswer = () => { if (r.answer) r.history.push({t:now(), by:who(), text:`Answered: ${I.answers[r.answer]}.`}); };
+  const i = issueFor(S.sel), key = i.key, r = S.reviews[key], P = PROPOSALS[key];
+  const logAnswer = () => { if (r.answer) r.history.push({t:now(), by:who(), text:`Answered: ${P.answers[r.answer]}.`}); };
   if (kind === 'approved') {
     if (!r.answer || r.answer === 'no' || !r.reason.trim()) return;
     r.checking = true; renderThread();
     setTimeout(() => {
-      r.checking = false; logAnswer();
-      I.apply(D.EQ[I.equip]);
-      r.status = 'approved'; r.decidedBy = who();
-      r.trust = r.answer === 'yes' ? 'Evidence: drawings and records, confirmed on site by the reviewer' : 'Evidence: drawings and records only, not confirmed on site';
+      r.checking = false; logAnswer(); r.decidedBy = who();
+      const before = validate(S.G).map(v => v.key);
+      const G2 = S.G.clone(); for (const t of P.add) G2.add(...t);
+      const after = validate(G2).map(v => v.key);
+      const ok = !after.includes(key) && after.every(k => before.includes(k));
       r.history.push({t:now(), by:r.decidedBy, text:`Approved. Reason: ${r.reason.trim()}`});
-      r.history.push({t:now(), by:'System (simulated)', text:`Checked the change again: rule ${I.ruleId} passes. Record updated.`});
-      r.history.push({t:now(), by:'System (simulated)', text:'Saved who approved it, why, the answer given and the evidence used.'});
-      renderAll(); toast(I.result);
-    }, reduce ? 50 : 900);
+      if (!ok) {
+        r.status = 'rejected';
+        r.history.push({t:now(), by:'Rule check (in this page)', text:'The corrected graph failed the rule check, so the change was not saved.'});
+        recordDecision(key, 'blocked by validation'); renderAll(); return;
+      }
+      r.added = P.add.filter(t => !S.G.has(...t));
+      for (const t of P.add) S.G.add(...t);
+      r.status = 'approved';
+      r.trust = r.answer === 'yes' ? 'Evidence: drawings and records, confirmed on site by the reviewer' : 'Evidence: drawings and records only, not confirmed on site';
+      recordDecision(key, 'approved', [['ex:trust', L(r.answer === 'yes' ? 'confirmed on site' : 'not confirmed on site')], ...r.added.map(t => ['ex:added', L(t.join(' '))])]);
+      r.history.push({t:now(), by:'Rule check (in this page)', text:`Checked the corrected graph against every rule: rule ${i.rule} now passes and nothing else broke.`});
+      r.history.push({t:now(), by:'Knowledge graph', text:`Wrote ${r.added.length} triple${r.added.length === 1 ? '' : 's'} and a decision record (who, when, answer, reason, evidence).`});
+      renderAll(); toast(P.result);
+    }, reduce ? 50 : 800);
     return;
   }
+  logAnswer(); r.decidedBy = who();
   if (kind === 'rejected') {
     if (!r.answer || !r.reason.trim()) return;
-    logAnswer(); r.status = 'rejected'; r.decidedBy = who();
+    r.status = 'rejected';
     r.history.push({t:now(), by:r.decidedBy, text:`Rejected. Reason: ${r.reason.trim()}`});
-    r.history.push({t:now(), by:'System (simulated)', text:'Correction not applied. The problem stays open.'});
-    renderAll(); toast('Correction rejected. Nothing was changed.'); return;
+    r.history.push({t:now(), by:'Knowledge graph', text:'Correction not applied. The rejection is recorded; the problem stays open.'});
+    recordDecision(key, 'rejected'); renderAll(); toast('Correction rejected. The building information did not change.'); return;
   }
-  logAnswer(); r.status = 'investigating'; r.decidedBy = who(); r.wo = 'WO-' + (++woSeq);
+  r.status = 'investigating'; r.wo = 'WO-' + (++woSeq);
   r.history.push({t:now(), by:r.decidedBy, text:`Requested further investigation${r.reason.trim() ? '. Note: ' + r.reason.trim() : '.'}`});
-  r.history.push({t:now(), by:'System (simulated)', text:`Created work order ${r.wo} for a site check. Record not changed.`});
+  r.history.push({t:now(), by:'System (simulated)', text:`Created work order ${r.wo} for a site check. Building information not changed.`});
+  recordDecision(key, 'investigation requested', [['ex:workOrder', L(r.wo)]]);
   renderAll(); toast(`Work order ${r.wo} created (simulated).`);
 }
 
-/* ---------------- behind panel ---------------- */
+/* =================== behind panel =================== */
+const fmtT = ([s, p, o]) => `${s}  ${p}  ${o}`;
 function renderBehind() {
-  const id = D.sel, e = D.EQ[id], k = e.issue, I = k ? D.IS[k] : null, r = k ? D.R[k] : null;
+  const G = S.G, id = S.sel, i = issueFor(id), r = i && S.reviews[i.key], P = i && PROPOSALS[i.key], rule = i && ruleById(i.rule);
   const step = (n, title, text, code, wait) => `<div class="bstep ${wait ? 'wait' : ''}"><i>${n}</i><div><b>${title}</b><p>${text}</p>${code ? `<pre>${esc(code)}</pre>` : ''}</div></div>`;
-  let h = '';
-  if (!I) {
-    h += step(1, 'Read the equipment from the knowledge graph', `Fetched ${esc(id)} and its links.`, `SELECT ?relation ?target WHERE {\n  ex:${id} ?relation ?target .\n}`);
-    h += step(2, 'Ran the rule checks', 'Every rule passes for this equipment. Nothing to propose.', 'Conforms: True');
-    $('#behindBody').innerHTML = h; return;
-  }
-  h += step(1, 'Read the equipment from the knowledge graph', 'The page shows these stored facts in plain language.', I.tech.query + '\n\n' + I.tech.rows);
-  h += step(2, `SHACL rule ${I.ruleId} found a violation`, 'The plain-language problem comes from the rule’s message.', I.tech.shape + '\n\n' + I.tech.report);
-  h += step(3, 'SGR proposed a patch and pre-checked it', 'In the real system an LLM writes this patch from the evidence. It is merged in a copy of the graph and validated before it reaches the reviewer.', I.tech.patch + '\n\nPre-check: Conforms: True');
-  if (r.status === 'open') {
-    h += step(4, 'Waiting for the reviewer', 'Review rules: an answer is required; an answer that contradicts the evidence blocks approval; approval and rejection need a reason.', '', true);
-    h += step(5, 'Nothing saved yet', 'The graph is unchanged until a correction is approved and passes validation again.', '', true);
-  } else if (r.status === 'approved') {
-    h += step(4, 'Review rules satisfied', `Answer: ${I.answers[r.answer]}. Reason given. Approved by ${r.decidedBy}.`, '');
-    h += step(5, 'Merged, validated again, recorded, synced', 'The patch was merged in RDF, validated again with the rule set, recorded with PROV-O, then written to the graph database.',
-      `${I.tech.fact} .\n\nex:change-${I.id} a prov:Activity ;\n  prov:wasAssociatedWith "${r.decidedBy}" ;\n  prov:used ex:evidence-drawing ;\n  ex:reviewerAnswer "${r.answer}" ;\n  ex:reason "${r.reason.trim().replace(/"/g, "'")}" .\n\nRevalidation: Conforms: True\nSync to Neo4j via n10s: done`);
-  } else if (r.status === 'rejected') {
-    h += step(4, 'Rejected by the reviewer', `Reason: ${r.reason.trim()}`, '');
-    h += step(5, 'Patch discarded', 'The graph is unchanged. The rejection is recorded so the next proposal can avoid the same answer.', `ex:review-${I.id} a prov:Activity ;\n  ex:outcome "rejected" ;\n  prov:wasAssociatedWith "${r.decidedBy}" .`);
+  const rows = G.match(id, null, null).filter(t => !['ex:origin', 'ex:source'].includes(t[1])).map(fmtT).join('\n');
+  let h = step(1, 'Read the equipment from the knowledge graph', `These are the stored triples about ${esc(G.label(id))}. The Review tab shows them in plain language.`, `SELECT ?p ?o WHERE { ${id} ?p ?o . }\n\n${rows}`);
+  if (!i || !i.live) {
+    h += step(2, 'Ran the rule checks on the graph', i ? 'The earlier problem is fixed. Every rule passes now.' : 'Every rule passes for this equipment. Nothing to propose.', RULES.map(x => `${x.id}: pass`).join('\n') + '\nConforms: True');
   } else {
-    h += step(4, 'Escalated to a person on site', 'The reviewer asked for more evidence before anything changes.', '');
-    h += step(5, 'Work order created', 'The graph is unchanged. A maintenance work order asks for a site check.', `CMMS work order ${r.wo}\n  equipment: ${id}\n  task: confirm ${I.field}\n  status: open`);
+    h += step(2, `Rule ${rule.id} found a violation`, 'The plain-language problem comes from this rule. The check runs on the graph in this page; in the real system it is pySHACL.', `${rule.shape}\n\nConforms: False\nFocus node: ${id}\nPath: ${rule.path}\nMessage: ${rule.msg}`);
+  }
+  if (P) {
+    const patch = JSON.stringify({add:P.add.map(([s, p, o]) => ({s, p, o:unL(o)})), remove:[], rationale:P.rationale}, null, 2);
+    h += step(3, 'SGR proposed a patch and pre-checked it', 'In the real system an LLM writes this patch from the evidence. It is merged in a copy of the graph and checked before it reaches the reviewer.', patch + '\n\nPre-check on a copy: rule ' + i.rule + ' passes');
+    if (r.status === 'open') {
+      h += step(4, 'Waiting for the reviewer', 'Review rules: an answer is required; an answer that contradicts the evidence blocks approval; approval and rejection need a reason.', '', true);
+      h += step(5, 'Nothing written yet', 'The graph is unchanged until a correction is approved and passes the checks again.', '', true);
+    } else {
+      const rec = G.match(`ex:review-${P.id}`, null, null).map(fmtT).join('\n');
+      h += step(4, r.status === 'approved' ? 'Review rules satisfied' : r.status === 'rejected' ? 'Rejected by the reviewer' : 'Escalated to a person on site', `Decision by ${esc(r.decidedBy)}.`, '');
+      h += step(5, r.status === 'approved' ? 'Checked again, then written to the graph' : 'Decision recorded, data unchanged',
+        r.status === 'approved' ? 'The corrected graph passed every rule, so the new triples and a provenance record were written.' : 'Only the decision record was written.',
+        (r.status === 'approved' ? r.added.map(fmtT).join('\n') + '\n\n' : '') + rec);
+    }
   }
   $('#behindBody').innerHTML = h;
 }
 
-/* ---------------- wiring ---------------- */
-function renderAll() { renderSteps(); renderList(); renderThread(); renderBehind(); }
-function select(id) {
-  if (!D.EQ[id]) return;
-  D.sel = id; D.showConn = false;
-  if (location.hash !== '#' + id) location.hash = id;
+/* =================== knowledge graph tab =================== */
+function hex(rr) { let d = ''; for (let k = 0; k < 6; k++) { const a = Math.PI / 3 * k + Math.PI / 6; d += (k ? 'L' : 'M') + (rr * Math.cos(a)).toFixed(1) + ',' + (rr * Math.sin(a)).toFixed(1); } return d + 'Z'; }
+const RAD = {equip:19, system:24, point:12, space:18, zone:20};
+function renderGraph() {
+  const G = S.G, svg = $('#kgsvg');
+  const viol = new Set(validate(G).map(v => v.focus));
+  const propose = [], newKeys = new Set();
+  for (const [key, r] of Object.entries(S.reviews)) {
+    const P = PROPOSALS[key]; if (!P) continue;
+    if (r.status === 'open') propose.push(...P.add);
+    if (r.status === 'approved') r.added.forEach(t => newKeys.add(t.join('|')));
+  }
+  const nodeIds = new Set(G.match(null, 'a', null).filter(([, , c]) => CLASS[c] && KIND_STYLE[CLASS[c].kind]).map(x => x[0]));
+  const propNodes = new Set(propose.filter(t => t[1] === 'a').map(t => t[0]));
+  const typeOf = id => G.type(id) || (propose.find(t => t[0] === id && t[1] === 'a') || [])[2];
+  const labelOf = id => G.has(id, 'a', typeOf(id)) ? G.label(id) : unL((propose.find(t => t[0] === id && t[1] === 'rdfs:label') || [, , id])[2]);
+  const edges = G.t.filter(([s, p, o]) => ['brick:feeds', 'rec:locatedIn', 'brick:hasPart', 'brick:hasPoint'].includes(p) && nodeIds.has(s) && nodeIds.has(o)).map(t => ({t, kind:newKeys.has(t.join('|')) ? 'new' : ''}));
+  for (const t of propose) if (['brick:feeds', 'rec:locatedIn', 'brick:hasPart', 'brick:hasPoint'].includes(t[1]) && !G.has(...t)) edges.push({t, kind:'prop'});
+  const sel = S.node, nb = new Set([sel]);
+  edges.forEach(({t}) => { if (t[0] === sel) nb.add(t[2]); if (t[2] === sel) nb.add(t[0]); });
+  let h = `<defs>${[['a', '#8695a9'], ['t', 'var(--teal)'], ['g', 'var(--ok)'], ['n', 'var(--navy-2)']].map(([n, c]) => `<marker id="k${n}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:${c}"/></marker>`).join('')}</defs>`;
+  const kindOf = id => CLASS[typeOf(id)].kind;
+  for (const {t: [s, p, o], kind} of edges) {
+    const a = POS[s], b = POS[o]; if (!a || !b) continue;
+    const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
+    const x1 = a[0] + ux * (RAD[kindOf(s)] + 2), y1 = a[1] + uy * (RAD[kindOf(s)] + 2), x2 = b[0] - ux * (RAD[kindOf(o)] + 6), y2 = b[1] - uy * (RAD[kindOf(o)] + 6);
+    const touch = s === sel || o === sel;
+    const cls = kind || (touch ? 'hl' : '');
+    h += `<line class="ke ${cls}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="url(#k${kind === 'prop' ? 't' : kind === 'new' ? 'g' : touch ? 'n' : 'a'})"><title>${esc(s + ' ' + p + ' ' + o)}</title></line>`;
+    if (S.labels || kind) h += `<text class="kel ${kind}" x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 - 5}">${kind === 'prop' ? '+ ' : kind === 'new' ? '✓ ' : ''}${esc(p.split(':')[1])}</text>`;
+  }
+  for (const id of [...nodeIds, ...propNodes]) {
+    const pos = POS[id]; if (!pos) continue;
+    const k = kindOf(id), [c, soft] = KIND_STYLE[k], r = RAD[k], isProp = propNodes.has(id) && !nodeIds.has(id);
+    let cls = 'kn' + (id === sel ? ' sel' : '') + (isProp ? ' prop' : '');
+    h += `<g class="${cls}" data-node="${id}" transform="translate(${pos[0]},${pos[1]})" tabindex="0" role="button" aria-label="${esc(labelOf(id))}, ${esc(CLASS[typeOf(id)].label)}${isProp ? ', proposed' : ''}">`;
+    h += `<circle class="ring" r="${r + 6}"/>`;
+    const st = `fill:${soft};stroke:${c}`;
+    if (k === 'equip') h += `<rect class="sh" x="-${r - 2}" y="-${r - 2}" width="${2 * r - 4}" height="${2 * r - 4}" rx="5" style="${st}"/>`;
+    else if (k === 'zone') h += `<path class="sh" d="M0,-${r} L${r},0 L0,${r} L-${r},0Z" style="${st}"/>`;
+    else if (k === 'system') h += `<rect class="sh" x="-${r}" y="-14" width="${2 * r}" height="28" rx="14" style="${st}"/>`;
+    else h += `<circle class="sh" r="${r}" style="${st}"/>`;
+    h += `<text class="gl" style="fill:${c}">${CLASS[typeOf(id)].gl}</text>`;
+    const lab = labelOf(id), short = lab.length > 18 ? lab.slice(0, 17) + '…' : lab;
+    h += `<text class="lb" y="${id === 'ex:BLDG' ? -r - 8 : r + 14}">${esc(short)}</text><title>${esc(lab)}</title>`;
+    if (viol.has(id)) h += `<g class="kbad" transform="translate(${r - 2},${-r + 2})"><circle r="8" style="fill:var(--bad)"/><text>!</text><title>Fails a rule check</title></g>`;
+    h += `</g>`;
+  }
+  svg.innerHTML = h;
+  svg.querySelectorAll('[data-node]').forEach(n => {
+    const pick = () => { S.node = n.dataset.node; if (equipList().includes(S.node)) S.sel = S.node; renderGraph(); renderNode(); };
+    n.addEventListener('click', pick);
+    n.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  });
+  $('#klegend').innerHTML = [['equip', 'Equipment'], ['space', 'Space'], ['zone', 'HVAC zone'], ['point', 'Sensor or command'], ['system', 'System']].map(([k, l]) => `<span><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="6" style="fill:${KIND_STYLE[k][1]};stroke:${KIND_STYLE[k][0]};stroke-width:2"/></svg>${l}</span>`).join('')
+    + '<span><svg width="30" height="10" aria-hidden="true"><line x1="0" y1="5" x2="30" y2="5" style="stroke:var(--teal);stroke-width:2.6;stroke-dasharray:6 4"/></svg>Proposed, not saved</span>'
+    + '<span><svg width="30" height="10" aria-hidden="true"><line x1="0" y1="5" x2="30" y2="5" style="stroke:var(--ok);stroke-width:2.8"/></svg>Added by an approved review</span>'
+    + '<span><svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="6.5" style="fill:var(--bad)"/></svg>Fails a rule check</span>';
+}
+function renderNode() {
+  const G = S.G, id = S.node, t = G.type(id);
+  if (!t) { $('#nodeinfo').innerHTML = `<p class="hint">${esc(plainId(id))} is proposed but not saved yet. Approve its correction in the Review tab to write it into the graph.</p>`; return; }
+  const added = new Set(Object.values(S.reviews).flatMap(r => r.status === 'approved' ? r.added.map(x => x.join('|')) : []));
+  const triples = [...G.match(id, null, null), ...G.match(null, null, id).filter(x => x[1] !== 'a')];
+  let h = `<div class="eqname">${esc(G.label(id))}</div><p class="small">${esc(CLASS[t].label)} · <span class="mono">${esc(id)}</span></p>`;
+  if (equipList().includes(id)) h += `<div><button class="btn" type="button" id="openReview">Open in review</button></div>`;
+  h += `<p class="small">${triples.length} stored triple${triples.length === 1 ? '' : 's'} about this node:</p><ul class="trip">${triples.map(x => `<li class="${added.has(x.join('|')) ? 'newt' : ''}">${esc(fmtT(x))}</li>`).join('')}</ul>`;
+  $('#nodeinfo').innerHTML = h;
+  const ob = $('#openReview'); if (ob) ob.addEventListener('click', () => { S.sel = id; setTab('review'); });
+}
+const PREFIXES = {brick:'https://brickschema.org/schema/Brick#', rec:'https://w3id.org/rec#', rdfs:'http://www.w3.org/2000/01/rdf-schema#', prov:'http://www.w3.org/ns/prov#', ex:'https://example.org/6f#'};
+function turtle() {
+  const G = S.G, subs = [];
+  for (const [s] of G.t) if (!subs.includes(s)) subs.push(s);
+  const added = new Set(Object.values(S.reviews).flatMap(r => r.status === 'approved' ? r.added.map(x => x.join('|')) : []));
+  let out = Object.entries(PREFIXES).map(([p, u]) => `@prefix ${p}: <${u}> .`).join('\n') + '\n';
+  for (const s of subs) {
+    const ts = G.match(s, null, null).sort((a, b) => (a[1] === 'a' ? -1 : b[1] === 'a' ? 1 : 0));
+    out += '\n' + s + '\n' + ts.map((t, k) => `    ${t[1]} ${t[2]}${k === ts.length - 1 ? ' .' : ' ;'}${added.has(t.join('|')) ? '   # added by an approved review' : ''}`).join('\n') + '\n';
+  }
+  return out;
+}
+function renderTurtle() {
+  const ttl = turtle();
+  $('#ttl').innerHTML = esc(ttl).replace(/^(@prefix.*)$/gm, '<span class="p">$1</span>').replace(/(&quot;[^&]*?&quot;)/g, '<span class="l">$1</span>').replace(/(# added by an approved review)/g, '<span class="c">$1</span>');
+  $('#kgCount').textContent = `${S.G.t.length} triples`;
+}
+
+/* =================== wiring =================== */
+function renderAll() { renderSteps(); renderList(); renderThread(); renderBehind(); renderGraph(); renderNode(); renderTurtle(); }
+function setTab(t) {
+  S.tab = t;
+  $('#tabReview').setAttribute('aria-selected', t === 'review'); $('#tabGraph').setAttribute('aria-selected', t === 'graph');
+  $('#viewReview').hidden = t !== 'review'; $('#viewGraph').hidden = t !== 'graph';
+  const want = t === 'graph' ? 'graph' : plainId(S.sel);
+  if (location.hash !== '#' + want) location.hash = want;
   renderAll();
 }
+function select(id) { if (!equipList().includes(id)) return; S.sel = id; S.node = id; S.showConn = false; if (S.tab === 'review' && location.hash !== '#' + plainId(id)) location.hash = plainId(id); renderAll(); }
+function fromHash() {
+  const h = location.hash.slice(1);
+  if (h === 'graph') { if (S.tab !== 'graph') setTab('graph'); return; }
+  const id = 'ex:' + h;
+  if (equipList().includes(id)) { S.sel = id; S.node = id; setTab('review'); }
+}
+$('#tabReview').addEventListener('click', () => setTab('review'));
+$('#tabGraph').addEventListener('click', () => { S.node = S.sel; setTab('graph'); });
+$('#kgLabels').addEventListener('change', e => { S.labels = e.target.checked; renderGraph(); });
+$('#copyTtl').addEventListener('click', () => {
+  const txt = turtle();
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents($('#ttl')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast('Selected. Press Ctrl+C or ⌘C.'); };
+  try { navigator.clipboard.writeText(txt).then(() => toast('Turtle copied'), fallback); } catch (e) { fallback(); }
+});
 $('#toggleBehind').addEventListener('click', e => {
   const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
   e.currentTarget.setAttribute('aria-pressed', on); $('#behind').hidden = !on; $('#grid').classList.toggle('nobehind', !on);
 });
-$('#resetDemo').addEventListener('click', () => { const keep = D.sel; D = freshData(); D.sel = keep; renderAll(); toast('Demo reset. All decisions cleared.'); });
-addEventListener('hashchange', () => { const id = location.hash.slice(1); if (D.EQ[id] && id !== D.sel) { D.sel = id; D.showConn = false; renderAll(); } });
-const start = location.hash.slice(1);
-if (D.EQ[start]) D.sel = start;
+$('#resetDemo').addEventListener('click', () => { const keep = S.sel, tab = S.tab; fresh(); S.sel = keep; S.node = keep; S.tab = tab; renderAll(); toast('Demo reset. The graph is back to its starting state.'); });
+addEventListener('hashchange', fromHash);
+fresh();
+if (location.hash) fromHash();
 renderAll();
-window.__review = {get D() { return D; }};
+window.__review = {get S() { return S; }, validate, turtle};
 })();
 </script>
 

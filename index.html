@@ -3,951 +3,546 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Symbolic-Guided Regeneration (SGR)</title>
-<meta name="description" content="Website for the SGR journal paper: the chiller-trip story, a hands-on validation and repair demo on one fan coil unit, the SGR patch loop, the 6F baseline graph used as the answer key, evaluation design and data availability.">
+<title>SGR Building Information Review</title>
+<meta name="description" content="A demonstration of how SGR helps facility operators check building information, understand problems, and review proposed corrections with evidence and a decision history.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
 <style>
-/* Layout: one page that tells the story first (the chiller question, the gaps in
-   as-built drawings), lets readers try validation and repair on one unit, then
-   presents the SGR loop, the answer key, pipeline, evaluation and availability.
-   Light theme only, navy + teal. */
+/* Layout: an operator review tool. Equipment list on the left, the selected
+   problem as a review thread in the middle (problem, proposed correction with
+   evidence, question, decision, history), and an optional "what the system does"
+   panel on the right. Light theme only, navy + teal. */
 :root{
   color-scheme: light;
-  --bg:#f3f6f9; --surface:#ffffff; --surface-2:#f7f9fb; --line:#d7dfe8; --line-2:#b8c5d3;
-  --ink:#0f1f3a; --ink-2:#34445e; --muted:#56667d;
+  --bg:#f2f5f8; --surface:#ffffff; --surface-2:#f7f9fb; --line:#d8e0e8; --line-2:#b8c5d3;
+  --ink:#0f1f3a; --ink-2:#34445e; --muted:#5a6a80;
   --navy:#13294b; --navy-2:#1f3f6e; --navy-soft:#e7edf6;
   --teal:#0b7473; --teal-2:#085d5c; --teal-soft:#dff1f0;
-  --c-equip:#1f4e8c; --c-equip-soft:#e4ecf7; --c-ctrl:#0b7473; --c-ctrl-soft:#dcf0ef;
-  --c-space:#9a5300; --c-space-soft:#fbeedd; --c-zone:#2a6fab; --c-zone-soft:#e3f0fa;
-  --c-point:#6a4fb3; --c-point-soft:#efeafa;
   --ok:#17803a; --ok-soft:#e5f4ea; --bad:#c42727; --bad-soft:#fdecec;
-  --warn:#9a5600; --warn-soft:#fff3df; --amber:#e29400; --amber-soft:#fff2d6;
+  --warn:#9a5600; --warn-soft:#fff3df; --info:#2a5fa8; --info-soft:#e6eefa;
   --font:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
-html{scroll-behavior:smooth;scroll-padding-top:64px}
-@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}*{transition:none!important}}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 var(--font);-webkit-font-smoothing:antialiased}
+html{scroll-behavior:smooth;scroll-padding-top:70px}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font:15.5px/1.55 var(--font);-webkit-font-smoothing:antialiased}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--navy)}
 .gutter{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.wrap{max-width:1120px;margin:0 auto}
-h1,h2,h3{text-wrap:balance;margin:0;color:var(--navy)}
+.wrap{max-width:1360px;margin:0 auto}
+h1,h2,h3,h4{text-wrap:balance;margin:0;color:var(--navy)}
 p{margin:0}
 :focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-code,.mono{font-family:var(--mono);font-size:.9em}
-code{background:var(--navy-soft);border-radius:4px;padding:1px 5px}
+.mono{font-family:var(--mono)}
+button,input,textarea{font:inherit;color:inherit}
 
-.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--navy);color:#fff}
-.bar .wrap{display:flex;align-items:center;gap:6px 18px;min-height:50px;flex-wrap:wrap;max-width:1100px}
-.bar b{font-size:16px;white-space:nowrap}
-.bar nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;justify-content:flex-end;min-width:0}
-.bar nav::-webkit-scrollbar{display:none}
-.bar nav a{color:#c7d3e6;text-decoration:none;font-size:13.5px;padding:6px 10px;border-radius:6px;white-space:nowrap}
-.bar nav a:hover{background:#1d3a66;color:#fff}
-@media (max-width:720px){.bar nav{flex:1 0 100%;justify-content:flex-start}}
-
-.head{padding-block:34px 20px;display:flex;flex-direction:column;gap:10px}
-.eyebrow{font:600 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--teal-2)}
-.head h1{font-size:clamp(30px,4.6vw,46px);line-height:1.08;letter-spacing:-.01em}
-.head .q{font-size:clamp(18px,2vw,21px);color:var(--navy);font-weight:500;max-width:56ch}
-.head .lead{font-size:17px;color:var(--ink-2);max-width:66ch}
-.pending{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;background:var(--warn-soft);border:1px solid #ecc88f;border-radius:10px;padding:10px 14px;font-size:14.5px;max-width:72ch}
-.pending b.i{font:700 14px var(--mono);color:var(--warn)}
-
-.sec{padding-block:34px;border-top:1px solid var(--line)}
-.sec > h2{font-size:clamp(23px,3vw,28px);line-height:1.2;margin-bottom:8px}
-.sec > .sub{font-size:17px;color:var(--ink-2);max-width:68ch;margin-bottom:16px}
-.sec h3{font-size:17px;margin:22px 0 8px}
-.sec p{max-width:70ch;margin-bottom:10px}
-.sec ul{max-width:68ch;padding-left:22px;margin:0 0 12px}
-.sec li{margin-bottom:6px}
-.points{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:4px 0 18px}
-@media (max-width:720px){.points{grid-template-columns:1fr}}
-.points div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14.5px;line-height:1.55}
-.points b{display:block;color:var(--navy);margin-bottom:2px}
-.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:6px 0 18px}
-@media (max-width:820px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.stats div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
-.stats b{font-size:24px;line-height:1.15;color:var(--navy);font-variant-numeric:tabular-nums}
-.stats span{font-size:13px;color:var(--muted)}
-.tblwrap{overflow-x:auto;margin:6px 0 16px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
-table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.5}
-th,td{border-bottom:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
-tr:last-child td{border-bottom:0}
-th{background:var(--navy-soft);font-weight:600;font-size:13.5px;color:var(--navy)}
-.pipe{list-style:none;counter-reset:p;margin:6px 0 16px;padding:0;display:flex;flex-direction:column;gap:0}
-.pipe li{counter-increment:p;display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;position:relative;padding-bottom:14px}
-.pipe li::before{content:counter(p);display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--navy-2);color:#fff;font:600 13px var(--mono);z-index:1}
-.pipe li::after{content:"";position:absolute;left:14px;top:30px;bottom:0;width:2px;background:var(--line-2)}
-.pipe li:last-child::after{display:none}
-.pipe li b{display:block;color:var(--navy)}
-.pipe li span{font-size:14.5px;color:var(--ink-2)}
-.pipe li.loop::before{background:var(--teal)}
-
-/* simulator */
-.sim{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin:6px 0 18px;overflow:hidden}
-.sim-h{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--surface-2)}
-.lbl{font-size:13px;color:var(--muted);font-weight:600}
-.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:7px;overflow:hidden;flex-wrap:wrap}
-.seg button{border:0;background:var(--surface);padding:6px 11px;font:500 13.5px var(--font);cursor:pointer;color:var(--ink-2)}
-.seg button+button{border-left:1px solid var(--line-2)}
-.seg button[aria-pressed="true"]{background:var(--navy-2);color:#fff}
-.sim select{font:inherit;font-size:14px;border:1px solid var(--line-2);border-radius:6px;padding:5px 8px;background:var(--surface)}
-.ctl{display:flex;gap:6px;flex-wrap:wrap}
-.diagram{overflow-x:auto;padding:10px 8px 4px}
-.diagram svg{display:block;width:100%;min-width:640px;height:auto}
-.fn rect,.fn path{fill:var(--surface);stroke:#a9b6c6;stroke-width:1.4;transition:fill .25s,stroke .25s}
-.fn text{font:500 13px var(--font);fill:var(--ink);text-anchor:middle;dominant-baseline:central}
-.fn text.s{font-size:11px;fill:var(--muted)}
-.fn.final rect{fill:#e6f0fb;stroke:#2f6db5;stroke-width:2}
-.fn.on rect,.fn.on path{fill:var(--amber-soft);stroke:var(--amber);stroke-width:3}
-.fn.done rect,.fn.done path{stroke:var(--navy-2);stroke-width:1.8}
-.fn.end-ok rect{fill:var(--ok-soft);stroke:var(--ok);stroke-width:3}
-.fn.end-bad rect{fill:var(--warn-soft);stroke:var(--warn);stroke-width:3}
-.fe{fill:none;stroke:#b4bfcc;stroke-width:1.6;transition:stroke .25s}
-.fe.on{stroke:var(--amber);stroke-width:3.2}
-.fe.done{stroke:var(--navy-2);stroke-width:2}
-.fl{font:500 11.5px var(--font);fill:var(--muted)}
-.sim-b{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border-top:1px solid var(--line)}
-@media (max-width:760px){.sim-b{grid-template-columns:1fr}}
-.sim-b > div{padding:12px 14px;min-width:0;display:flex;flex-direction:column;gap:8px}
-.sim-b > div + div{border-left:1px solid var(--line)}
-@media (max-width:760px){.sim-b > div + div{border-left:0;border-top:1px solid var(--line)}}
-.sim-b h3{font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0}
-.status{display:flex;flex-wrap:wrap;gap:6px}
-.pill{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;border-radius:999px;padding:2px 10px;border:1px solid}
-.pill.idle{background:var(--surface-2);color:var(--muted);border-color:#c3ccd7}
-.pill.ok{background:var(--ok-soft);color:#11612b;border-color:#a8d5b6}
-.pill.bad{background:var(--bad-soft);color:#9b1c1c;border-color:#eab1b1}
-.pill.warn{background:var(--warn-soft);color:#7a4500;border-color:#ecc88f}
-.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:14px;max-height:250px;overflow:auto}
-.log li{display:grid;grid-template-columns:26px minmax(0,1fr);gap:6px;padding:4px 6px;border-radius:5px}
-.log li i{font:600 11.5px var(--mono);font-style:normal;color:var(--muted)}
-.log li.cur{background:var(--amber-soft)}
-.fb{font:12.5px/1.55 var(--mono);background:var(--bad-soft);border:1px solid #eab1b1;border-radius:6px;padding:8px 10px;color:#7d1717;word-break:break-word}
-.fb.okk{background:var(--ok-soft);border-color:#a8d5b6;color:#11612b}
-pre{margin:0;background:var(--navy);color:#dbe6f5;border-radius:8px;padding:10px 12px;overflow:auto;font:12px/1.55 var(--mono);white-space:pre;max-height:250px}
-.sim-note{font-size:13px;color:var(--muted);padding:10px 14px;border-top:1px solid var(--line);background:var(--surface-2)}
-.sec .sim-note{max-width:none;margin:0}
-
-.foot{border-top:1px solid var(--line);padding-block:20px 34px;font-size:13.5px;color:var(--muted)}
-.foot p{max-width:84ch;margin-bottom:6px}
-
-.sim,.tblwrap,.stats,.points,.pipe{max-width:980px}
-
-/* ---- story + one-unit lab ---- */
-.versus{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
-.versus div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:15px;flex:1 1 280px}
-.versus b{display:block;color:var(--navy)}
-.versus .g{border-color:#9ccfcd;background:var(--teal-soft)}
-
-/* lab */
-.lab{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:20px;align-items:start;padding-bottom:30px}
-@media (max-width:900px){.lab{grid-template-columns:1fr}}
-.stage{position:sticky;top:calc(62px + env(safe-area-inset-top,0px));background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-@media (max-width:900px){.stage{position:static}}
-.stage-h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--muted);flex-wrap:wrap}
-.stage-h b{color:var(--navy);font-size:14px}
-.gbox{overflow-x:auto;background:radial-gradient(circle at 1px 1px,#dbe3ec 1px,transparent 1.3px) 0 0/22px 22px,var(--surface-2)}
-#g{display:block;width:100%;min-width:620px;height:auto}
-.info{border-top:1px solid var(--line);padding:12px 14px;min-height:150px}
-.info h3{font:600 17px var(--mono);color:var(--navy)}
-.info .t{color:var(--ink-2);font-size:14.5px;margin:2px 0 8px}
-.facts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;font-size:14px}
-.facts li{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline}
-.facts li.gone{color:var(--bad);text-decoration:line-through}
-.tag{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;border-radius:999px;padding:0 7px;border:1px solid;white-space:nowrap;line-height:1.6}
-.tag.drawn{background:var(--navy-soft);color:var(--navy);border-color:#b4c4dd}
-.tag.inferred{background:var(--warn-soft);color:#7a4500;border-color:#ecc88f}
-.tag.illus{background:#f1f3f6;color:#4a5668;border-color:#c3ccd7;border-style:dashed}
-.tag.fixed{background:var(--ok-soft);color:#11612b;border-color:#a8d5b6}
-.tag.wrong{background:var(--bad-soft);color:#9b1c1c;border-color:#eab1b1}
-.hint{font-size:13.5px;color:var(--muted)}
-
-/* svg */
-.e{fill:none;stroke:#8695a9;stroke-width:1.7}
-.e.removed{stroke:var(--bad);stroke-dasharray:6 5;opacity:.75}
-.e.wrong{stroke:var(--bad);stroke-width:3}
-.e.fixed{stroke:var(--ok);stroke-width:3}
-.e.preview{stroke:var(--teal);stroke-width:3;stroke-dasharray:7 4}
-.e.path{stroke:var(--amber);stroke-width:4.5}
-.el{font:500 11px var(--mono);fill:var(--ink-2);paint-order:stroke;stroke:var(--surface-2);stroke-width:4px;stroke-linejoin:round;text-anchor:middle}
-.el.removed,.el.wrong{fill:var(--bad);font-weight:600}
-.el.fixed{fill:var(--ok);font-weight:600}
-.el.preview{fill:var(--teal-2);font-weight:600}
-.nd{cursor:pointer}
-.nd .sh{stroke-width:2}
-.nd.illus .sh{stroke-dasharray:4 3}
-.nd .gl{font:600 9.5px var(--mono);text-anchor:middle;dominant-baseline:central;pointer-events:none}
-.nd .lb{font:600 12px var(--mono);text-anchor:middle;fill:var(--ink);paint-order:stroke;stroke:var(--surface-2);stroke-width:4px;pointer-events:none}
-.nd .ring{fill:none;stroke:var(--navy-2);stroke-width:3;opacity:0}
-.nd.sel .ring{opacity:1}
-.nd.on-path .sh{stroke:var(--amber)!important;stroke-width:4}
-.nd.gone{opacity:.55}
-.nd.gone .sh{fill:var(--bad-soft)!important;stroke:var(--bad)!important;stroke-dasharray:4 3}
-.nd.new .sh{stroke:var(--teal)!important;stroke-dasharray:5 3}
-.nd:focus{outline:none}
-.nd:focus-visible .ring{opacity:1;stroke:var(--teal)}
-.bdg circle{stroke:#fff;stroke-width:1.5}
-.bdg text{font:700 10px var(--font);fill:#fff;text-anchor:middle;dominant-baseline:central}
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--navy);color:#fff}
+.top .wrap{display:flex;align-items:center;gap:8px 16px;min-height:54px;flex-wrap:wrap;padding-block:6px}
+.brand{display:flex;flex-direction:column;line-height:1.2;margin-right:auto}
+.brand b{font-size:17px}
+.brand span{font-size:12.5px;color:#b9c7dc}
+.sim{font:600 11.5px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:#bdf1ee;border:1px solid #2a8a87;background:#0f3a4a;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.tbtn{border:1px solid #4d6890;background:transparent;color:#fff;border-radius:7px;padding:6px 11px;font-size:13.5px;cursor:pointer;white-space:nowrap}
+.tbtn:hover{background:#1d3a66}
+.tbtn[aria-pressed="true"]{background:#173a5f;border-color:#7fd8d4}
+.who{display:flex;align-items:center;gap:6px;font-size:13px;color:#c7d3e6}
+.who input{width:150px;border:1px solid #4d6890;background:#0f2443;color:#fff;border-radius:6px;padding:4px 8px;font-size:13.5px}
 
 /* steps */
-.csteps{display:flex;flex-direction:column;gap:12px}
-.cstep{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
-.cstep h2{font-size:18px;display:flex;gap:10px;align-items:baseline}
-.cstep h2 span{font:600 13px var(--mono);color:var(--teal-2)}
-.cstep p{font-size:15px;color:var(--ink-2)}
-.btns{display:flex;flex-wrap:wrap;gap:8px}
-.btn{font:600 14.5px var(--font);border:1px solid var(--line-2);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 14px;cursor:pointer;text-align:left;line-height:1.3}
+.steps{display:flex;gap:6px;overflow-x:auto;padding-block:12px;scrollbar-width:thin}
+.steps button{flex:1 0 auto;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 13px 5px 6px;font-size:13.5px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.steps i{font-style:normal;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--surface-2);border:1px solid var(--line-2);font:600 11px var(--mono)}
+.steps .done{color:var(--ink-2)} .steps .done i{background:var(--teal-soft);border-color:var(--teal);color:var(--teal-2)}
+.steps .now{color:var(--ink);border-color:var(--navy-2);box-shadow:0 0 0 2px var(--navy-soft)} .steps .now i{background:var(--navy-2);border-color:var(--navy-2);color:#fff}
+.steps .na{opacity:.55}
+
+/* grid */
+.grid{display:grid;grid-template-columns:270px minmax(0,1fr) 360px;gap:14px;align-items:start;padding-bottom:24px}
+.grid.nobehind{grid-template-columns:270px minmax(0,1fr)}
+@media (max-width:1180px){.grid,.grid.nobehind{grid-template-columns:250px minmax(0,1fr)}.behind{grid-column:1/-1}}
+@media (max-width:780px){.grid,.grid.nobehind{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;min-width:0}
+.ph{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.ph h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+/* equipment list */
+.list{list-style:none;margin:0;padding:6px;display:flex;flex-direction:column;gap:4px}
+.list button{width:100%;text-align:left;border:1px solid transparent;background:transparent;border-radius:8px;padding:9px 10px;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center}
+.list button:hover{background:var(--surface-2)}
+.list button[aria-current="true"]{background:var(--navy-soft);border-color:#b4c4dd}
+.list b{font:600 14.5px var(--mono);color:var(--navy)}
+.list small{grid-column:1/-1;font-size:12.5px;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;border-radius:999px;padding:1px 9px;border:1px solid;white-space:nowrap;line-height:1.6}
+.c-open{background:var(--warn-soft);color:#7a4500;border-color:#ecc88f}
+.c-ok{background:var(--ok-soft);color:#11612b;border-color:#a8d5b6}
+.c-rej{background:#f1f3f6;color:#4a5668;border-color:#c3ccd7}
+.c-inv{background:var(--info-soft);color:#21487f;border-color:#b3c8e8}
+.c-demo{background:#f1f3f6;color:#4a5668;border-color:#c3ccd7;border-style:dashed}
+.c-doc{background:var(--navy-soft);color:var(--navy);border-color:#b4c4dd}
+.c-simu{background:var(--teal-soft);color:var(--teal-2);border-color:#9ccfcd}
+
+/* main thread */
+.thread{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card > header{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.card > header .n{font:600 12px var(--mono);color:var(--teal-2)}
+.card > header h3{font-size:16px}
+.card > header .sp{flex:1}
+.eqname{font:600 24px var(--mono);color:var(--navy)}
+.kv{display:grid;grid-template-columns:150px minmax(0,1fr);gap:7px 14px;margin:0;font-size:15px}
+@media (max-width:520px){.kv{grid-template-columns:1fr;gap:2px}.kv dd{margin-bottom:8px!important}}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;min-width:0}
+.missing{color:var(--bad);font-weight:600}
+.upd{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center}
+.problem{border-left:4px solid var(--warn)}
+.problem.solved{border-left-color:var(--ok)}
+.problem .title{font-size:19px;font-weight:600;color:var(--ink)}
+.small{font-size:13.5px;color:var(--muted)}
+.rule{font-size:14px;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;padding:8px 10px}
+.prop{border-left:4px solid var(--teal)}
+.prop .value{font-size:19px;font-weight:600;color:var(--teal-2)}
+.prop.accepted{border-left-color:var(--ok)}
+.prop.accepted .value{color:var(--ok)}
+.ev{display:flex;flex-direction:column;gap:8px}
+.evi{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--surface-2)}
+.evi > .chip{align-self:start}
+.evi .k{font:600 11.5px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.evi b{color:var(--navy)}
+.evi p{grid-column:1/-1;font-size:14.5px;color:var(--ink-2)}
+.evi figure{grid-column:1/-1;margin:4px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px;overflow-x:auto}
+.evi figure svg{display:block;width:100%;min-width:360px;max-width:560px;height:auto}
+.evi figcaption{font-size:12px;color:var(--muted);margin-top:2px}
+.dr-room{fill:#f6f8fb;stroke:#13294b;stroke-width:2}
+.dr-txt{font:600 12px var(--mono);fill:#13294b}
+.dr-sm{font:500 10.5px var(--mono);fill:#5a6a80}
+.dr-eq{fill:#fff;stroke:#13294b;stroke-width:2}
+.dr-hl{fill:none;stroke:#e29400;stroke-width:2.5;stroke-dasharray:5 4}
+.dr-duct{stroke:#2a5fa8;stroke-width:3;fill:none}
+
+/* question + decision */
+.ask{border-left:4px solid var(--navy-2)}
+.q{font-size:17px;font-weight:600;color:var(--ink)}
+.answers{display:flex;flex-direction:column;gap:6px}
+.answers label{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:8px;padding:9px 12px;cursor:pointer;font-size:15px}
+.answers label:hover{border-color:var(--line-2)}
+.answers input{accent-color:var(--teal);width:17px;height:17px;margin:0}
+.answers label.sel{border-color:var(--teal);background:var(--teal-soft)}
+.field{display:flex;flex-direction:column;gap:4px;font-size:14px}
+.field textarea{border:1px solid var(--line-2);border-radius:8px;padding:8px 10px;min-height:64px;resize:vertical;font-size:15px}
+.quick{display:flex;flex-wrap:wrap;gap:6px}
+.quick button{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:2px 10px;font-size:12.5px;cursor:pointer;color:var(--ink-2)}
+.decide{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font:600 14.5px var(--font);border:1px solid var(--line-2);background:var(--surface);color:var(--ink);border-radius:8px;padding:9px 15px;cursor:pointer}
 .btn:hover{border-color:var(--navy-2)}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-.btn.primary{background:var(--teal);border-color:var(--teal);color:#fff}
-.btn.primary:hover{background:var(--teal-2)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
 .btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
 .btn.no{color:var(--bad);border-color:#e7b4b4}
-.btn.break{display:grid;grid-template-columns:22px minmax(0,1fr);gap:6px;width:100%;font-weight:500}
-.btn.break b{font-weight:600}
-.btn.break small{display:block;color:var(--muted);font-size:12.5px}
-.btn.break i{font-style:normal;font:700 14px var(--mono);color:var(--bad)}
-.btn.break[aria-pressed="true"]{background:var(--bad-soft);border-color:#eab1b1}
-.btn.break[aria-pressed="true"] i{color:var(--bad)}
-.result{border-radius:8px;padding:10px 12px;font-size:14.5px;display:flex;flex-direction:column;gap:6px}
-.result.demo{background:var(--amber-soft);border:1px solid #f0cf86}
-.result.pdf{background:var(--navy-soft);border:1px solid #b4c4dd}
-.result b.big{font-size:22px;color:var(--navy)}
-.checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
-.checks li{display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px;font-size:14.5px;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
-.checks li .s{font:700 14px var(--mono)}
-.checks li.pass .s{color:var(--ok)}
-.checks li.fail{background:var(--bad-soft);border-color:#eab1b1}
-.checks li.fail .s{color:var(--bad)}
-.checks li.skip .s{color:var(--muted)}
-.checks li small{display:block;color:var(--ink-2);margin-top:2px}
-.proposal{border:1px solid #9ccfcd;background:var(--teal-soft);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;font-size:14.5px}
-.diff{font:12.5px/1.55 var(--mono);display:flex;flex-direction:column;gap:2px}
-.diff .m{color:#9b1c1c} .diff .p{color:#11612b}
-.shacl{border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
-.shacl summary{cursor:pointer;padding:8px 10px;font-weight:600;font-size:14.5px;color:var(--navy-2)}
-.shacl pre{margin:0 10px 8px;background:var(--navy);color:#dbe6f5;border-radius:6px;padding:10px 12px;overflow-x:auto;font:12px/1.55 var(--mono);white-space:pre}
-.shacl pre .c{color:#8ea3c0}
-.shacl .hint{padding:0 10px 10px}
-.note{font-size:14px;color:var(--ink-2);background:var(--surface-2);border-left:3px solid var(--teal);padding:7px 10px;border-radius:0 6px 6px 0}
-.note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
-.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--ink-2)}
-.legend span{display:inline-flex;align-items:center;gap:5px}
+.btn.inv{color:var(--info);border-color:#b3c8e8}
+.hint{font-size:13.5px;color:var(--muted)}
+.msg{font-size:14px;border-radius:8px;padding:8px 11px}
+.msg.warn{background:var(--warn-soft);border:1px solid #ecc88f;color:#6b3d00}
+.msg.ok{background:var(--ok-soft);border:1px solid #a8d5b6;color:#11612b}
+.msg.info{background:var(--info-soft);border:1px solid #b3c8e8;color:#21487f}
+.rules{margin:0;padding-left:18px;font-size:13.5px;color:var(--ink-2)}
+.rules li{margin-bottom:2px}
 
+/* result + history */
+.result{font-size:18px;font-weight:600}
+.result.ok{color:var(--ok)} .result.inv{color:var(--info)} .result.rej{color:var(--ink-2)}
+.hist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.hist li{display:grid;grid-template-columns:56px minmax(0,1fr);gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.hist li:last-child{border-bottom:0}
+.hist time{font:500 12px var(--mono);color:var(--muted);padding-top:2px}
+.hist b{color:var(--navy)}
+.hist .by{font-size:12.5px;color:var(--muted)}
+.empty{font-size:14.5px;color:var(--muted);background:var(--surface-2);border:1px dashed var(--line-2);border-radius:8px;padding:10px 12px}
 
-.versus{max-width:980px;margin:8px 0 16px}
-.gaps{list-style:none;padding:0!important;margin:6px 0 14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-width:980px!important}
-@media (max-width:760px){.gaps{grid-template-columns:1fr}}
-.gaps li{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14.5px;margin:0!important}
-.gaps li b{display:block;color:var(--navy)}
-.bridge{font-size:17px;color:var(--navy);font-weight:500;max-width:68ch;border-left:4px solid var(--teal);padding:4px 0 4px 14px;margin:6px 0 4px}
-.lab{margin-top:6px}
-.sec .facts,.sec .checks{padding:0;margin:0;max-width:none}
-.sec .facts li,.sec .checks li{margin:0}
-.sec .info h3{margin:0}
-.sec .cstep p{margin:0}
+/* connections */
+.conn{border:1px solid var(--line);border-radius:8px;background:var(--surface-2);padding:8px;overflow-x:auto}
+.conn svg{display:block;width:100%;min-width:480px;max-width:640px;height:auto}
+.cn rect{fill:#fff;stroke:#8695a9;stroke-width:1.5}
+.cn.center rect{fill:var(--navy-soft);stroke:var(--navy-2);stroke-width:2}
+.cn text{font:600 12.5px var(--mono);fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.cl{stroke:#8695a9;stroke-width:1.6;fill:none}
+.cl.prop{stroke:var(--teal);stroke-dasharray:6 4;stroke-width:2.2}
+.cl.new{stroke:var(--ok);stroke-width:2.6}
+.clt{font:500 11.5px var(--font);fill:var(--ink-2);paint-order:stroke;stroke:#f7f9fb;stroke-width:4px}
+.clt.prop{fill:var(--teal-2);font-weight:600}
+.clt.new{fill:var(--ok);font-weight:600}
+.linkbtn{background:none;border:0;padding:0;color:var(--navy-2);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-size:14px}
+
+/* behind panel */
+.behind .body{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.bstep{display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px}
+.bstep i{font-style:normal;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--navy-soft);color:var(--navy-2);font:600 11px var(--mono)}
+.bstep.wait{opacity:.5}
+.bstep b{font-size:14px;color:var(--navy)}
+.bstep p{font-size:13.5px;color:var(--ink-2)}
+.bstep pre{margin:6px 0 0;background:var(--navy);color:#dbe6f5;border-radius:6px;padding:8px 10px;overflow-x:auto;font:11.5px/1.5 var(--mono);white-space:pre}
+
+.about{padding-block:8px 34px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.about{grid-template-columns:1fr}}
+.about .card p{font-size:14.5px;color:var(--ink-2)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--navy);color:#fff;padding:8px 14px;border-radius:999px;font-size:13.5px;z-index:40}
 </style>
 
 </head>
 <body>
-<div class="bar gutter">
+<header class="top gutter">
   <div class="wrap">
-    <b>SGR</b>
-    <nav aria-label="Sections">
-      <a href="#story">Story</a>
-      <a href="#try">Try it</a>
-      <a href="#loop">The loop</a>
-      <a href="#answer-key">Answer key</a>
-      <a href="#pipeline">Pipeline</a>
-      <a href="#evaluation">Evaluation</a>
-      <a href="#availability">Data and code</a>
-    </nav>
+    <div class="brand"><b>Building information review</b><span>Level 6 · SGR demonstration</span></div>
+    <span class="sim" title="Rule checks, proposals, validation and work orders on this page are simulated.">Simulated checks and proposals</span>
+    <label class="who" for="who">Reviewer <input id="who" type="text" value="Demo operator" autocomplete="off"></label>
+    <button class="tbtn" type="button" id="toggleBehind" aria-pressed="true">What the system does</button>
+    <button class="tbtn" type="button" id="resetDemo">Reset demo</button>
   </div>
+</header>
+
+<div class="wrap gutter">
+  <nav class="steps" id="steps" aria-label="Review steps"></nav>
+  <div class="grid" id="grid">
+    <aside class="panel" aria-label="Equipment">
+      <div class="ph"><h2>Equipment</h2><span class="small" id="openCount"></span></div>
+      <ul class="list" id="list"></ul>
+    </aside>
+    <main class="thread" id="thread" aria-live="polite"></main>
+    <aside class="panel behind" id="behind" aria-label="What the system does">
+      <div class="ph"><h2>What the system does</h2><span class="chip c-simu">simulated</span></div>
+      <div class="body" id="behindBody"></div>
+    </aside>
+  </div>
+
+  <section class="about" aria-label="About this demonstration">
+    <div class="card"><h3>What this is</h3><p>A demonstration of how SGR helps people govern changes to building information. The knowledge graph stores the building information; this page makes it understandable and lets an operator review each proposed correction before anything changes.</p></div>
+    <div class="card"><h3>What is simulated</h3><p>The rule checks, the proposed corrections, the validation and the work orders are scripted for this demo. No language model, SHACL engine or database runs here, and nothing is sent anywhere. Your decisions stay in this browser tab.</p></div>
+    <div class="card"><h3>Where the examples come from</h3><p>AHU-02, VAV-03, Mechanical Room 01 and Room R6-12 are example data. FCU-6F-10, CH-1 and room R6-08 follow the documented 6F baseline graph, including the control drawing that shows one analog input for return air temperature.</p></div>
+  </section>
 </div>
-
-<main class="wrap gutter">
-  <header class="head">
-    <span class="eyebrow">Companion page · SGR journal paper</span>
-    <h1>SGR: Symbolic-Guided Regeneration</h1>
-    <p class="q">When a large language model repairs or updates a building’s knowledge graph, how do we make sure it does not make things up?</p>
-    <p class="lead">SGR lets the model propose a patch, checks the patched graph against SHACL rules, and feeds every violation back to the model until the graph passes or a reviewer takes over. Every accepted change is recorded with its provenance. The method is evaluated on a clean, fully traced baseline graph of a real building’s HVAC system.</p>
-    <div class="pending"><b class="i">!</b><span><b>Paper details not added yet.</b> The paper’s title, authors, abstract, results and citation will be added from the paper itself. This page reports no experimental results.</span></div>
-  </header>
-
-
-  <!-- STORY -->
-  <section class="sec" id="story">
-    <h2>One building, one question</h2>
-    <p class="sub">On a summer afternoon one of the chillers on the roof of a research building trips. Facility staff need to know which rooms will get hot, and whom to notify.</p>
-    <div class="versus">
-      <div><b>With drawings: half a day</b>Flip through four sheets: the equipment schedule, the system flow diagram, then the HVAC plan and the architectural plan for each floor. The sixth floor alone has 18 fan coil units, and it is easy to miss one.</div>
-      <div class="g"><b>With a knowledge graph: one query</b>The computer follows the arrows: chiller → fan coil units → HVAC zones → rooms. On the 6F graph that returns 13 rooms in under a second: 7 faculty offices, 2 graduate student rooms, 2 academic exchange rooms, 1 laboratory and a lounge. The data room has its own cooling system.</div>
-    </div>
-    <p class="bridge">That answer is only as good as the graph.</p>
-    <h3>Drawings are made to build a building, not to run one</h3>
-    <p>Rebuilding the 6F graph from official as-built drawings exposed gaps that are typical of a handover:</p>
-    <ul class="gaps">
-      <li><b>No room names on the HVAC drawings</b>Equipment and spaces had to be linked by aligning another drawing by coordinates.</li>
-      <li><b>No point names or addresses</b>Control drawings give I/O counts, so we know “there is a temperature” but not where to read it.</li>
-      <li><b>Unclear scope</b>A “not in this project” remark in the equipment schedule sits between two rows.</li>
-      <li><b>Copied templates</b>The title block of the master index contains text from another project.</li>
-      <li><b>Mixed periods</b>The renovation was split into phases, so data for the same floor come from different times.</li>
-      <li><b>So errors get in</b>A missing sensor or a wrong arrow sends a query to the wrong room.</li>
-    </ul>
-    <p class="bridge">Large language models can help repair and update a graph like this, but they can also make things up. SGR lets a model propose repairs while symbolic rules decide what is accepted.</p>
-  </section>
-
-  <!-- TRY -->
-  <section class="sec" id="try">
-    <h2>Try it on one unit</h2>
-    <p class="sub">The documented neighbourhood of one fan coil unit, FCU-6F-10. Inject a defect the way a handover would, validate the graph, and repair it.</p>
-  <div class="lab">
-    <section class="stage" aria-label="Graph">
-      <div class="stage-h"><b>The graph around FCU-6F-10</b><span>Click any shape · <button class="btn" type="button" id="unitReset" style="padding:3px 10px;font-size:13px">Reset</button></span></div>
-      <div class="gbox"><svg id="g" viewBox="0 0 900 480" role="img" aria-label="Knowledge graph around fan coil unit FCU-6F-10"></svg></div>
-      <div class="info" id="info" aria-live="polite"></div>
-    </section>
-
-    <div class="csteps">
-      <section class="cstep">
-        <h2><span>1</span>Explore</h2>
-        <p>Each shape is a <b>node</b> (one thing) and each arrow is a <b>relationship</b>. Click a node to see its facts and where each fact came from.</p>
-        <div class="legend">
-          <span><span class="tag drawn">drawn</span> on a drawing</span>
-          <span><span class="tag inferred">inferred</span> deduced, and recorded as such</span>
-          <span><span class="tag illus">illustrative</span> added for this demo</span>
-        </div>
-      </section>
-
-      <section class="cstep">
-        <h2><span>2</span>A chiller trips</h2>
-        <p>Ask the opening question of this small graph: follow the arrows from CH-1 to the rooms it serves.</p>
-        <div class="btns"><button class="btn primary" type="button" id="trip">Trip CH-1</button></div>
-        <div id="tripOut" hidden></div>
-      </section>
-
-      <section class="cstep">
-        <h2><span>3</span>Inject a defect</h2>
-        <p>These are the defect types used to test the rules. Each imitates a real handover mistake. Watch the red lines.</p>
-        <div class="btns" id="breaks">
-          <button class="btn break" type="button" data-d="D1" aria-pressed="false"><i>✕</i><span><b>Remove the return air temperature point</b><small>The handover data left out a sensor</small></span></button>
-          <button class="btn break" type="button" data-d="D2" aria-pressed="false"><i>✕</i><span><b>Remove the room it is installed in</b><small>The equipment list gives no location</small></span></button>
-          <button class="btn break" type="button" data-d="D3" aria-pressed="false"><i>✕</i><span><b>Send its air to the wrong zone</b><small>Floor plan and system drawing disagree</small></span></button>
-        </div>
-      </section>
-
-      <section class="cstep">
-        <h2><span>4</span>Check it: SHACL validation</h2>
-        <p>SHACL is the standard way to write rules for a graph, like a building code review. Here are three rules for FCU-6F-10. Press the button to test the graph against them.</p>
-        <div class="btns"><button class="btn primary" type="button" id="check">Validate the graph</button></div>
-        <ul class="checks" id="checks" hidden></ul>
-        <details class="shacl"><summary>See the three rules written in SHACL</summary>
-<pre><span class="c"># Rule 1: every fan coil unit has a return air temperature point</span>
-ex:R1-FCU-RAT  a sh:NodeShape ;
-  sh:targetClass  brick:FCU ;
-  sh:property [
-    sh:path  brick:hasPoint ;
-    sh:qualifiedValueShape  [ sh:class brick:Return_Air_Temperature_Sensor ] ;
-    sh:qualifiedMinCount  1 ;
-    sh:message  "FCU lacks a return air temperature point" ] .
-
-<span class="c"># Rule 2: every fan coil unit is installed somewhere</span>
-ex:R2-FCU-Room  a sh:NodeShape ;
-  sh:targetClass  brick:FCU ;
-  sh:property [
-    sh:path  rec:locatedIn ;
-    sh:minCount  1 ;
-    sh:message  "Equipment has no installed location" ] .
-
-<span class="c"># Rule 3: the zone it supplies contains its room</span>
-ex:R3-FCU-ZoneRoom  a sh:NodeShape ;
-  sh:targetClass  brick:FCU ;
-  sh:sparql [
-    sh:message  "Supplied zone does not contain the installed room" ;
-    sh:select  """
-      SELECT $this WHERE {
-        $this brick:feeds ?zone ; rec:locatedIn ?room .
-        FILTER NOT EXISTS { ?zone brick:hasPart ?room }
-      }""" ] .</pre>
-          <p class="hint">Example shapes for learning. In the real project these run in pySHACL with the Brick 1.4.4 ontology. This page runs the same three checks in JavaScript, so you can try them without installing anything.</p>
-        </details>
-      </section>
-
-      <section class="cstep">
-        <h2><span>5</span>Repair it</h2>
-        <p>In SGR an LLM proposes the patch and the rules check it. Here the patch is scripted from the drawing evidence, and nothing changes until you approve it.</p>
-        <div class="btns"><button class="btn primary" type="button" id="suggest">Suggest a repair</button></div>
-        <div id="prop"></div>
-      </section>
-
-      <section class="cstep">
-        <h2><span>6</span>Passing is not proof</h2>
-        <p>Rules check that facts fit together, not that they match the building. Record FCU-6F-10 in the wrong room <i>and</i> the wrong room’s zone, then check again. This is why SGR is scored against a clean answer key.</p>
-        <div class="btns"><button class="btn" type="button" id="cw">Record it in R6-07 instead</button></div>
-        <div id="cwOut"></div>
-      </section>
-    </div>
-  </div>
-  </section>
-  <!-- LOOP -->
-  <section class="sec" id="loop">
-    <h2>The loop</h2>
-    <p class="sub">In the full method the patch comes from an LLM, and the loop runs until the graph passes or K attempts are used. Patches reach the graph database only after passing validation in RDF. Choose a case and press Play, or step through it.</p>
-
-    <div class="sim" id="sim">
-      <div class="sim-h">
-        <span class="lbl">Case</span>
-        <div class="seg" role="group" aria-label="Case">
-          <button type="button" data-case="first" aria-pressed="true">Fixed first try</button>
-          <button type="button" data-case="retry" aria-pressed="false">Needs a retry</button>
-          <button type="button" data-case="fail" aria-pressed="false">Never fixed</button>
-          <button type="button" data-case="clean" aria-pressed="false">Already valid</button>
-        </div>
-        <label class="lbl" for="kSel">K (max attempts)
-          <select id="kSel"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select>
-        </label>
-        <span style="flex:1"></span>
-        <div class="ctl">
-          <button class="btn primary" type="button" id="loopPlay">Play</button>
-          <button class="btn" type="button" id="loopStep">Step</button>
-          <button class="btn" type="button" id="loopReset">Reset</button>
-        </div>
-      </div>
-      <div class="diagram">
-        <svg viewBox="0 0 760 410" role="img" aria-labelledby="fdT fdD">
-          <title id="fdT">SGR patch data flow</title>
-          <desc id="fdD">Neo4j graph, export to RDF, pySHACL check, then the decision “violations left?”. If no, record PROV-O and sync to Neo4j via n10s, and the next round starts from the updated graph. If yes, the decision “retries below K?”. If yes, the LLM proposes a patch, it is merged in RDF and revalidated. If no, escalate to a reviewer, which creates a CMMS work order.</desc>
-          <defs>
-            <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:#8c99aa"/></marker>
-            <marker id="ahOn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:#e29400"/></marker>
-          </defs>
-          <path class="fe" id="e-neo-export" d="M162 52 H190" marker-end="url(#ah)"/>
-          <path class="fe" id="e-export-check" d="M332 52 H360" marker-end="url(#ah)"/>
-          <path class="fe" id="e-check-viol" d="M502 52 H528" marker-end="url(#ah)"/>
-          <path class="fe" id="e-viol-retry" d="M604 90 V132" marker-end="url(#ah)"/>
-          <path class="fe" id="e-viol-record" d="M680 52 H740 V355 H322" marker-end="url(#ah)"/>
-          <path class="fe" id="e-retry-llm" d="M528 170 H502" marker-end="url(#ah)"/>
-          <path class="fe" id="e-llm-merge" d="M360 170 H332" marker-end="url(#ah)"/>
-          <path class="fe" id="e-merge-check" d="M261 148 V118 H431 V76" marker-end="url(#ah)"/>
-          <path class="fe" id="e-retry-esc" d="M604 208 V258" marker-end="url(#ah)"/>
-          <path class="fe" id="e-record-neo" d="M91 332 V76" marker-end="url(#ah)"/>
-          <text class="fl" x="700" y="44">no</text>
-          <text class="fl" x="612" y="118">yes</text>
-          <text class="fl" x="508" y="160">yes</text>
-          <text class="fl" x="612" y="240">no</text>
-          <text class="fl" x="316" y="112">revalidate</text>
-          <text class="fl" x="102" y="300">next round starts from the updated graph</text>
-          <g class="fn" id="n-neo"><rect x="20" y="30" width="142" height="44" rx="8"/><text x="91" y="52">Neo4j graph</text></g>
-          <g class="fn" id="n-export"><rect x="190" y="30" width="142" height="44" rx="8"/><text x="261" y="52">Export to RDF</text></g>
-          <g class="fn" id="n-check"><rect x="360" y="30" width="142" height="44" rx="8"/><text x="431" y="52">pySHACL check</text></g>
-          <g class="fn" id="n-viol"><path d="M604 14 L680 52 L604 90 L528 52 Z"/><text x="604" y="52">Violations left?</text></g>
-          <g class="fn" id="n-retry"><path d="M604 132 L680 170 L604 208 L528 170 Z"/><text x="604" y="170">Retries below K?</text></g>
-          <g class="fn" id="n-llm"><rect x="360" y="148" width="142" height="44" rx="8"/><text x="431" y="170">LLM proposes patch</text></g>
-          <g class="fn" id="n-merge"><rect x="190" y="148" width="142" height="44" rx="8"/><text x="261" y="170">Merge in RDF</text></g>
-          <g class="fn" id="n-esc"><rect x="524" y="258" width="160" height="54" rx="8"/><text x="604" y="276">Escalate to reviewer</text><text class="s" x="604" y="296">Creates a CMMS work order</text></g>
-          <g class="fn final" id="n-record"><rect x="20" y="332" width="302" height="46" rx="8"/><text x="171" y="355">Record PROV-O, sync to Neo4j via n10s</text></g>
-        </svg>
-      </div>
-      <div class="sim-b">
-        <div>
-          <h3>Run</h3>
-          <div class="status" id="status"></div>
-          <ol class="log" id="log" aria-live="polite"></ol>
-        </div>
-        <div>
-          <h3>Feedback the LLM reads (sh:message)</h3>
-          <div class="fb" id="fb">No validation yet.</div>
-          <h3>Latest patch (JSON-LD)</h3>
-          <pre id="patchOut">No patch proposed yet.</pre>
-        </div>
-      </div>
-      <p class="sim-note">Illustrative run, not experimental data. The defect (FCU-6F-10 missing its return air temperature point) is one of the documented defect types; the patch contents, their JSON-LD layout and the <code>ex:</code> namespace are illustrative. The value of K is a parameter. Nothing here calls an LLM, pySHACL or Neo4j.</p>
-    </div>
-
-    <div class="points">
-      <div><b>Patch format</b>JSON-LD listing the triples to add and the triples to remove, with a rationale.</div>
-      <div><b>Validate what the model produced</b>Merging and validation happen in RDF, so SHACL checks the model’s actual output, unaffected by the property-graph conversion.</div>
-      <div><b>Feedback in plain language</b>Each shape’s <code>sh:message</code> states what a violation means; this is the text the model reads when it tries again.</div>
-      <div><b>Bounded retries, then a person</b>After K attempts without passing, the case goes to a reviewer, which creates a CMMS work order.</div>
-      <div><b>Only valid states are written back</b>The graph database receives a state only after it passes validation.</div>
-      <div><b>Provenance on every change</b>Accepted changes are recorded with PROV-O before syncing to Neo4j via n10s.</div>
-    </div>
-  </section>
-
-  <!-- ANSWER KEY -->
-  <section class="sec" id="answer-key">
-    <h2>The answer key: the 6F baseline graph</h2>
-    <p class="sub">The HVAC system on the sixth floor of a research building, rebuilt from its as-built drawings with Brick Schema 1.4.4 and RealEstateCore. Defects are injected into this clean graph, and repairs are judged against it.</p>
-    <div class="stats">
-      <div><b>210</b><span>nodes</span></div>
-      <div><b>≈1,400</b><span>triples</span></div>
-      <div><b>18</b><span>fan coil units</span></div>
-      <div><b>88</b><span>points, all backed by control drawings</span></div>
-      <div><b>13</b><span>rooms served by the central chillers</span></div>
-      <div><b>189</b><span>drawing-derived nodes</span></div>
-      <div><b>21</b><span>inferred nodes</span></div>
-      <div><b>0</b><span>synthetic-completion nodes</span></div>
-    </div>
-    <h3>Quality</h3>
-    <ul>
-      <li>Passes every SHACL shape shipped with the official Brick 1.4.4. During modelling, the first version produced 55 violations because some relationships were written the wrong way; after correction there were none.</li>
-      <li>An early version contained 26 points filled in to complete the model. After the control drawings were found, all 26 were replaced by drawing-backed points.</li>
-    </ul>
-    <h3>Provenance on every node and relation</h3>
-    <div class="tblwrap"><table>
-      <thead><tr><th>Assertion status</th><th>Meaning</th><th>When it is used</th></tr></thead>
-      <tbody>
-        <tr><td class="mono">drawing-derived</td><td>Taken directly from the as-built drawings</td><td>The sheet and the specific layer, block or text can be named</td></tr>
-        <tr><td class="mono">inferred</td><td>Reasoned from the drawings</td><td>The drawings point in a direction but cannot confirm it; the reason is stated in the source field</td></tr>
-        <tr><td class="mono">synthetic-completion</td><td>Synthetic data added for experiments</td><td>Currently none; any addition is marked separately from original data</td></tr>
-      </tbody>
-    </table></div>
-    <p>A relation never carries a stronger status than its endpoints: if an endpoint is inferred, every relation to it is inferred too.</p>
-    <h3>Reproducibility</h3>
-    <ul>
-      <li>The graph is generated by a build script from the converted drawings; the Turtle file is never edited by hand.</li>
-      <li>Rerunning the script on the same input gives the same SHA-256 hash.</li>
-      <li>Version 1.0 is frozen with its node count, triple count, inferred count and hash recorded. Any correction becomes a new version, and every test that depends on the baseline is rerun.</li>
-    </ul>
-  </section>
-
-  <!-- PIPELINE -->
-  <section class="sec" id="pipeline">
-    <h2>Pipeline</h2>
-    <p class="sub">From drawings to a validated, versioned graph, and around the repair loop.</p>
-    <ol class="pipe">
-      <li><span><b>As-built drawings</b>AutoCAD R14 files covering the equipment schedule, system flow diagram, HVAC and architectural plans, and control schematics.</span></li>
-      <li><span><b>Local conversion</b>LibreDWG 0.13.3 converts the drawings to JSON or DXF, read in Python. No online viewers or conversion services are used.</span></li>
-      <li><span><b>Scripted build</b>A build script produces the Turtle graph and a modelling table; the table records the assertion status of each relation.</span></li>
-      <li><span><b>Freeze</b>The baseline is versioned and frozen with its SHA-256 hash.</span></li>
-      <li><span><b>Graph database</b>Loaded into Neo4j 5.26 through n10s 5.26. A round-trip check compares the exported triples with the original file, and any differences are resolved before data taken from Neo4j is validated.</span></li>
-      <li><span><b>Validation</b>Exported to RDF and checked with pySHACL, using the Brick 1.4.4 ontology and RDFS inference.</span></li>
-      <li class="loop"><span><b>SGR repair loop</b>Patch, merge in RDF, revalidate, retry up to K, or escalate.</span></li>
-      <li><span><b>Record and sync</b>PROV-O provenance is recorded and the passing state is synced back to Neo4j via n10s.</span></li>
-    </ol>
-  </section>
-
-  <!-- EVALUATION -->
-  <section class="sec" id="evaluation">
-    <h2>Evaluation design</h2>
-    <p class="sub">Defects that imitate real handover errors are injected into the clean baseline. SGR then tries to repair them, and the result is compared with the baseline.</p>
-    <h3>Defect types (examples)</h3>
-    <div class="tblwrap"><table>
-      <thead><tr><th>Injected defect</th><th>Real situation it imitates</th><th>What the rules should report</th></tr></thead>
-      <tbody>
-        <tr><td>Delete a fan coil unit’s return air temperature point</td><td>Handover data omit a sensor</td><td>The unit lacks a return air temperature point</td></tr>
-        <tr><td>Delete a fan coil unit’s “located in” relation</td><td>The equipment list gives no installed location</td><td>That equipment has no location</td></tr>
-        <tr><td>Point a fan coil unit’s “feeds” to another room’s zone</td><td>The floor plan and the system drawing disagree</td><td>The zone does not match the room where the equipment is</td></tr>
-      </tbody>
-    </table></div>
-    <h3>Rules</h3>
-    <ul>
-      <li>Rule content is set by the supervising researcher, then transcribed into SHACL. Each rule is one <code>sh:NodeShape</code> named with its rule ID, and its <code>rdfs:comment</code> cites the source: a COBie clause, a Brick rule or a drawing number.</li>
-      <li>Every rule passes a positive test (the baseline gives zero violations) and a negative test (a small graph that breaks the rule reports a violation on the right node) before it is frozen with its hash.</li>
-      <li>Shapes use <code>sh:inversePath</code> for relations pointing the other way and <code>sh:qualifiedValueShape</code> to restrict the class being counted.</li>
-    </ul>
-    <h3>Why validation runs in pySHACL</h3>
-    <p>n10s can validate inside Neo4j, but it supports only part of SHACL, and inverse paths and qualified constraints would need separate testing. SGR experiments therefore always export to RDF and validate with pySHACL, with the Brick ontology and RDFS inference. Without them, subclass checks fail silently.</p>
-    <h3>Results</h3>
-    <div class="pending"><b class="i">!</b><span>To be added from the paper. No results are shown on this page.</span></div>
-  </section>
-
-  <!-- AVAILABILITY -->
-  <section class="sec" id="availability">
-    <h2>Data and code availability</h2>
-    <ul>
-      <li>The conversion scripts and the reconstruction record accompany the dataset.</li>
-      <li>The as-built drawings, the baseline graph and files derived from them are internal. They are not published or uploaded to external services.</li>
-      <li>Code, SHACL shapes and queries can be shared once building names and drawing content are removed.</li>
-    </ul>
-    <div class="tblwrap"><table>
-      <thead><tr><th>Component</th><th>Version</th></tr></thead>
-      <tbody>
-        <tr><td>Brick Schema</td><td class="mono">1.4.4</td></tr>
-        <tr><td>RealEstateCore</td><td>for spaces and zones (version not stated in the source documents)</td></tr>
-        <tr><td>LibreDWG</td><td class="mono">0.13.3</td></tr>
-        <tr><td>Neo4j</td><td class="mono">5.26.32</td></tr>
-        <tr><td>n10s (neosemantics)</td><td class="mono">5.26.0</td></tr>
-        <tr><td>pySHACL, rdflib</td><td>recorded with every run (not stated in the source documents)</td></tr>
-      </tbody>
-    </table></div>
-  </section>
-
-  <footer class="foot">
-    <p>This page restates two lab documents: the 6F baseline graph introduction (Oct 25, 2026) and the SGR research work manual (Oct 26, 2026). Building names, drawing numbers and internal infrastructure details are left out. Identifiers such as FCU-6F-10 and R6-08 come from the introduction; DFE-6F-10, PNL-R6-08, CHWV-6F-10-VC, R6-07 and Z-R6-07 are illustrative names used in the “Try it” graph.</p>
-    <p>Both interactive parts are illustrations. They do not run an LLM, a SHACL engine or a database, they do not calculate temperatures, and they report no experimental results.</p>
-  </footer>
-</main>
+<div class="toast" id="toast" hidden></div>
 
 <script>
 (() => {
 'use strict';
 const $ = s => document.querySelector(s);
-const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'}[c]));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
+const now = () => new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false});
+function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2600); }
 
-/* ---------- data ---------- */
-const TYPES = {
-  Chiller:{label:'Chiller', g:'equip', gl:'CH'}, FCU:{label:'Fan coil unit', g:'equip', gl:'FCU'}, Valve:{label:'Three-way valve', g:'equip', gl:'V3'},
-  Controller:{label:'DFE controller', g:'ctrl', gl:'DFE'}, Panel:{label:'Room panel (MSE)', g:'ctrl', gl:'T'},
-  RAT:{label:'Return air temperature sensor (point)', g:'point', gl:'AI'}, SAT:{label:'Supply air temperature sensor (point)', g:'point', gl:'AI'},
-  FSC:{label:'Fan speed command (point)', g:'point', gl:'DO'}, VC:{label:'Valve command (point)', g:'point', gl:'DO'},
-  Office:{label:'Room: office', g:'space', gl:'RM'}, Zone:{label:'HVAC zone', g:'zone', gl:'Z'},
+/* ---------------- demo data ---------------- */
+function freshData() {
+  const EQ = {
+    'AHU-02': {type:'Air handling unit', demo:true, location:null,
+      links:[['supplies air to', 'VAV-03'], ['has sensor', 'Supply air temperature sensor']],
+      sensors:['Supply air temperature'], sources:'Equipment schedule (example)', issue:'loc'},
+    'FCU-6F-10': {type:'Fan coil unit', demo:false, location:'Room R6-08 (faculty office, 25.2 m²)',
+      links:[['receives chilled water from', 'CH-1'], ['receives chilled water from', 'CH-2'], ['located in', 'Room R6-08'], ['controlled by', 'DFE controller']],
+      sensors:['Fan speed command (high / medium / low)', 'Valve command (open / close)'], sources:'6F HVAC plan, control drawings', issue:'rat'},
+    'VAV-03': {type:'VAV box (air terminal)', demo:true, location:'Room R6-12',
+      links:[['receives air from', 'AHU-02'], ['located in', 'Room R6-12']],
+      sensors:['Airflow'], sources:'Equipment schedule (example)', issue:null},
+    'CH-1': {type:'Chiller', demo:false, location:'Roof',
+      links:[['supplies chilled water to', 'FCU-6F-10'], ['part of', 'Central chilled water system']],
+      sensors:['Start / stop command'], sources:'Equipment schedule, system flow diagram', issue:null},
+  };
+  const IS = {
+    loc: {id:'Q-101', equip:'AHU-02', title:'AHU-02 is missing its location.',
+      why:'Without a location, technicians cannot find the unit, and alarms from it cannot be linked to a room.',
+      rule:'Every piece of equipment must have a recorded location.', ruleId:'LOC-01',
+      proposal:{label:'Suggested location', value:'Mechanical Room 01'},
+      evidence:[
+        {kind:'Drawing', title:'Mechanical plan, level 6', strength:'Direct evidence', text:'The AHU-02 symbol is drawn inside the room labelled “Mechanical Room 01”. The supply duct leaves this room toward VAV-03.', fig:'mech'},
+        {kind:'Record', title:'Equipment schedule', strength:'Supporting', text:'Lists AHU-02 as an air handling unit serving level 6. The schedule has no location column, so it does not confirm the room.'}],
+      basis:'Based on the drawing. Not yet checked on site.',
+      question:'The drawing suggests AHU-02 is in Mechanical Room 01. Can you confirm this?',
+      answers:{yes:'Yes, I have seen it there', no:'No, it is somewhere else', unknown:'I don’t know'},
+      reasons:['Matches the mechanical plan', 'Confirmed during a site walk', 'Drawing is clear; site check not needed now'],
+      apply:eq => { eq.location = 'Mechanical Room 01'; eq.links.push(['located in', 'Mechanical Room 01']); },
+      newLink:['located in', 'Mechanical Room 01'], field:'location',
+      result:'Location updated: AHU-02 is in Mechanical Room 01.',
+      tech:{
+        query:'SELECT ?relation ?target WHERE {\n  ex:AHU-02 ?relation ?target .\n}',
+        rows:'ex:AHU-02  a               brick:AHU\nex:AHU-02  brick:feeds     ex:VAV-03\nex:AHU-02  brick:hasPoint  ex:AHU-02-SAT\n(no rec:locatedIn)',
+        shape:'ex:LOC-01  a sh:NodeShape ;\n  sh:targetClass brick:Equipment ;\n  sh:property [ sh:path rec:locatedIn ;\n    sh:minCount 1 ;\n    sh:message "Equipment has no recorded location" ] .',
+        report:'Conforms: False\nFocus node: ex:AHU-02\nPath: rec:locatedIn\nMessage: Equipment has no recorded location',
+        patch:'{ "add": [ { "@id": "ex:AHU-02",\n    "rec:locatedIn": { "@id": "ex:MechRoom-01" } } ],\n  "remove": [],\n  "rationale": "AHU-02 symbol lies inside Mechanical Room 01\n    on the level 6 mechanical plan." }',
+        fact:'ex:AHU-02 rec:locatedIn ex:MechRoom-01'}},
+    rat: {id:'Q-102', equip:'FCU-6F-10', title:'FCU-6F-10 has no return air temperature sensor on record.',
+      why:'Without it, the system cannot tell how warm the air coming back from room R6-08 is, so comfort complaints and faults cannot be checked.',
+      rule:'Every fan coil unit must have a return air temperature sensor.', ruleId:'PNT-01',
+      proposal:{label:'Suggested addition', value:'Return air temperature sensor, read through input AI-1 of the unit’s DFE controller'},
+      evidence:[
+        {kind:'Drawing', title:'Control drawing for the DFE controller', strength:'Direct evidence', text:'Shows one analog input (AI×1) for return air temperature, three outputs for fan speed and one output for the valve.', fig:'dfe'},
+        {kind:'Record', title:'Approved building record, version 1.0', strength:'Direct evidence', text:'The approved record lists this sensor for FCU-6F-10. It is missing from the current copy.'}],
+      basis:'Based on the control drawing and the approved record.',
+      question:'Do you see a return air temperature reading for FCU-6F-10 in the building management system?',
+      answers:{yes:'Yes, the reading is there', no:'No, there is no such reading', unknown:'I don’t know'},
+      reasons:['Matches the control drawing', 'Reading visible in the BMS', 'Restores the approved record'],
+      apply:eq => { eq.sensors.unshift('Return air temperature'); eq.links.push(['has sensor', 'Return air temperature sensor']); },
+      newLink:['has sensor', 'Return air temperature sensor'], field:'sensors',
+      result:'Sensor added: FCU-6F-10 now has its return air temperature sensor on record.',
+      tech:{
+        query:'SELECT ?relation ?target WHERE {\n  ex:FCU-6F-10 ?relation ?target .\n}',
+        rows:'ex:FCU-6F-10  a               brick:FCU\nex:FCU-6F-10  rec:locatedIn   ex:R6-08\nex:FCU-6F-10  brick:hasPoint  ex:FCU-6F-10-FSC\n(no return air temperature point)',
+        shape:'ex:PNT-01  a sh:NodeShape ;\n  sh:targetClass brick:FCU ;\n  sh:property [ sh:path brick:hasPoint ;\n    sh:qualifiedValueShape [ sh:class\n      brick:Return_Air_Temperature_Sensor ] ;\n    sh:qualifiedMinCount 1 ;\n    sh:message "FCU lacks a return air temperature point" ] .',
+        report:'Conforms: False\nFocus node: ex:FCU-6F-10\nPath: brick:hasPoint\nMessage: FCU lacks a return air temperature point',
+        patch:'{ "add": [\n    { "@id": "ex:FCU-6F-10",\n      "brick:hasPoint": { "@id": "ex:FCU-6F-10-RAT" } },\n    { "@id": "ex:FCU-6F-10-RAT",\n      "@type": "brick:Return_Air_Temperature_Sensor" } ],\n  "remove": [],\n  "rationale": "Control drawing shows AI x1 for\n    return air temperature." }',
+        fact:'ex:FCU-6F-10 brick:hasPoint ex:FCU-6F-10-RAT'}},
+  };
+  const T0 = now();
+  const R = {};
+  for (const k in IS) R[k] = {status:'open', answer:null, reason:'', decidedBy:null, trust:null, wo:null, checking:false,
+    history:[
+      {t:T0, by:'Rule check (simulated)', text:`Found a problem: ${IS[k].title.replace(/\.$/, '')} (rule ${IS[k].ruleId}).`},
+      {t:T0, by:'SGR (simulated)', text:`Proposed a correction from the evidence. Before showing it, checked that the corrected record passes rule ${IS[k].ruleId}.`}]};
+  return {EQ, IS, R, sel:'AHU-02', showConn:false};
+}
+let D = freshData();
+let woSeq = 1042;
+
+/* ---------------- helpers ---------------- */
+const STATUS = {
+  open:['c-open', 'Needs review'], approved:['c-ok', 'Approved'], rejected:['c-rej', 'Correction rejected'], investigating:['c-inv', 'Under investigation'], none:['c-ok', 'No problems']};
+const statusOf = id => { const e = D.EQ[id]; return e.issue ? D.R[e.issue].status : 'none'; };
+const chip = st => `<span class="chip ${STATUS[st][0]}">${STATUS[st][1]}</span>`;
+function curStep() {
+  const e = D.EQ[D.sel]; if (!e.issue) return {now:1, na:true};
+  const r = D.R[e.issue];
+  return r.status === 'open' ? {now:4} : {now:5};
+}
+
+/* ---------------- render: steps ---------------- */
+const STEP_LABELS = ['Select equipment', 'See the problem', 'Review the correction', 'Decide', 'See the result'];
+function renderSteps() {
+  const s = curStep();
+  $('#steps').innerHTML = STEP_LABELS.map((l, i) => {
+    const n = i + 1; let cls = '';
+    if (s.na && n > 1) cls = 'na'; else if (n < s.now) cls = 'done'; else if (n === s.now) cls = 'now';
+    if (s.now === 5 && n === 5) cls = 'done now';
+    return `<button type="button" class="${cls}" data-go="s${n}"><i>${cls.includes('done') && !cls.includes('now') ? '✓' : n}</i>${l}</button>`;
+  }).join('');
+  document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => { const t = document.getElementById(b.dataset.go); if (t) t.scrollIntoView({behavior:reduce ? 'auto' : 'smooth', block:'start'}); }));
+}
+
+/* ---------------- render: list ---------------- */
+function renderList() {
+  const ids = Object.keys(D.EQ);
+  $('#list').innerHTML = ids.map(id => { const e = D.EQ[id]; return `<li><button type="button" data-eq="${id}" aria-current="${id === D.sel}"><b>${id}</b>${chip(statusOf(id))}<small>${esc(e.type)}${e.demo ? ' · example' : ''}</small></button></li>`; }).join('');
+  document.querySelectorAll('[data-eq]').forEach(b => b.addEventListener('click', () => select(b.dataset.eq)));
+  const open = ids.filter(id => statusOf(id) === 'open').length;
+  $('#openCount').textContent = open ? `${open} to review` : 'All reviewed';
+}
+
+/* ---------------- figures ---------------- */
+const FIG = {
+  mech:`<svg viewBox="0 0 560 210" role="img" aria-label="Plan excerpt: AHU-02 drawn inside Mechanical Room 01, with a duct leaving toward VAV-03">
+    <rect class="dr-room" x="20" y="20" width="250" height="170"/>
+    <text class="dr-txt" x="34" y="44">MECHANICAL ROOM 01</text>
+    <rect class="dr-room" x="270" y="20" width="270" height="170" style="fill:#fff"/>
+    <text class="dr-sm" x="284" y="44">CORRIDOR / ROOM R6-12</text>
+    <rect class="dr-eq" x="80" y="80" width="110" height="64"/>
+    <text class="dr-txt" x="135" y="116" text-anchor="middle">AHU-02</text>
+    <rect class="dr-hl" x="70" y="70" width="130" height="84" rx="6"/>
+    <path class="dr-duct" d="M190 112 H330 V150 H470"/>
+    <rect class="dr-eq" x="470" y="136" width="52" height="28"/>
+    <text class="dr-sm" x="496" y="154" text-anchor="middle">VAV-03</text>
+  </svg><figcaption>Illustrative excerpt for this demo, not a real drawing. The highlighted symbol is AHU-02.</figcaption>`,
+  dfe:`<svg viewBox="0 0 560 190" role="img" aria-label="Controller terminals: AI-1 return air temperature, DO-1 to DO-3 fan speed, DO-4 valve">
+    <rect class="dr-eq" x="20" y="20" width="160" height="150"/>
+    <text class="dr-txt" x="100" y="44" text-anchor="middle">DFE controller</text>
+    <text class="dr-sm" x="40" y="80">AI-1</text><text class="dr-sm" x="40" y="108">DO-1..3</text><text class="dr-sm" x="40" y="136">DO-4</text>
+    <path class="dr-duct" d="M180 76 H300" style="stroke:#e29400"/><text class="dr-sm" x="310" y="80" style="fill:#7a4500;font-weight:600">Return air temperature sensor</text>
+    <rect class="dr-hl" x="30" y="64" width="510" height="24" rx="5"/>
+    <path class="dr-duct" d="M180 104 H300"/><text class="dr-sm" x="310" y="108">Fan speed: high / medium / low</text>
+    <path class="dr-duct" d="M180 132 H300"/><text class="dr-sm" x="310" y="136">Three-way valve: open / close</text>
+  </svg><figcaption>Schematic of the documented I/O (AI×1, DO×3, DO×1). Terminal names are illustrative.</figcaption>`,
 };
-const COLORS = {equip:['--c-equip', '--c-equip-soft'], ctrl:['--c-ctrl', '--c-ctrl-soft'], point:['--c-point', '--c-point-soft'], space:['--c-space', '--c-space-soft'], zone:['--c-zone', '--c-zone-soft']};
-const R = {equip:20, ctrl:20, point:14, space:21, zone:23};
-// x, y are diagram positions only, not floor-plan coordinates
-const NODES = {
-  'CH-1':{t:'Chiller', x:90, y:95, id:'pdf', props:[['Chilled water reaches 3F to 9F through the main riser', 'drawn']]},
-  'CH-2':{t:'Chiller', x:90, y:250, id:'pdf', props:[]},
-  'FCU-6F-10':{t:'FCU', x:330, y:170, id:'pdf', props:[['Model FC-8', 'inferred', 'from the room size'], ['6,048 kcal/h cooling, 1,360 CMH airflow', 'inferred', 'schedule values for the inferred model'], ['Drawn on the 6F HVAC plan', 'drawn']]},
-  'R6-08':{t:'Office', x:800, y:170, id:'pdf', props:[['Faculty office', 'drawn'], ['25.2 m²', 'drawn']]},
-  'Z-R6-08':{t:'Zone', x:570, y:250, id:'pdf', props:[]},
-  'Z-R6-07':{t:'Zone', x:570, y:70, id:'illus', props:[['A neighbouring zone, added so a defect has somewhere wrong to point', 'illus']]},
-  'R6-07':{t:'Office', x:800, y:55, id:'illus', props:[['Neighbouring room, added for this demo', 'illus']]},
-  'CHWV-6F-10':{t:'Valve', x:175, y:330, id:'pdf', props:[['Controls whether chilled water flows through the coil', 'drawn']]},
-  'CHWV-6F-10-VC':{t:'VC', x:95, y:430, id:'illus-name', props:[['DO×1 on the control drawing: valve open / close', 'drawn']]},
-  'FCU-6F-10-RAT':{t:'RAT', x:300, y:330, id:'pdf', props:[['AI×1 on the control drawing', 'drawn']]},
-  'FCU-6F-10-FSC':{t:'FSC', x:430, y:330, id:'pdf', props:[['DO×3 on the control drawing: high / medium / low', 'drawn']]},
-  'DFE-6F-10':{t:'Controller', x:365, y:440, id:'illus-name', props:[['Measures return air temperature, switches fan speed, opens or closes the valve', 'drawn']]},
-  'PNL-R6-08':{t:'Panel', x:690, y:380, id:'illus-name', props:[['Where the occupant sets the room temperature', 'drawn'], ['MSE one-to-one panel', 'inferred', 'the room has only one fan coil unit']]},
-};
-const ROOMNAME = {'R6-08':'faculty office', 'R6-07':'illustrative room'};
-const REL = {feeds:'supplies', locatedIn:'located in', contains:'contains', hasPart:'has part', hasPoint:'has point', hostedBy:'hosted by', controls:'panel for'};
-const BASE = [
-  ['CH-1', 'feeds', 'FCU-6F-10', 'drawn'], ['CH-2', 'feeds', 'FCU-6F-10', 'drawn'],
-  ['FCU-6F-10', 'locatedIn', 'R6-08', 'drawn'], ['FCU-6F-10', 'feeds', 'Z-R6-08', 'drawn'], ['Z-R6-08', 'contains', 'R6-08', 'drawn'],
-  ['FCU-6F-10', 'hasPart', 'CHWV-6F-10', 'drawn'], ['FCU-6F-10', 'hasPoint', 'FCU-6F-10-RAT', 'drawn'], ['FCU-6F-10', 'hasPoint', 'FCU-6F-10-FSC', 'drawn'],
-  ['CHWV-6F-10', 'hasPoint', 'CHWV-6F-10-VC', 'drawn'], ['FCU-6F-10', 'hasPart', 'DFE-6F-10', 'drawn'],
-  ['FCU-6F-10-RAT', 'hostedBy', 'DFE-6F-10', 'drawn'], ['FCU-6F-10-FSC', 'hostedBy', 'DFE-6F-10', 'drawn'], ['CHWV-6F-10-VC', 'hostedBy', 'DFE-6F-10', 'drawn'],
-  ['PNL-R6-08', 'locatedIn', 'R6-08', 'drawn'], ['PNL-R6-08', 'controls', 'FCU-6F-10', 'inferred'],
-  ['Z-R6-07', 'contains', 'R6-07', 'illus'],
-].map(([s, p, o, pv]) => Object.freeze({s, p, o, pv}));
-Object.freeze(BASE);
-const key = f => f.s + '|' + f.p + '|' + f.o;
-const BASEKEYS = new Set(BASE.map(key));
-const F = 'FCU-6F-10';
 
-/* ---------- state ---------- */
-let S;
-function fresh() { S = {facts:BASE.map(f => ({...f})), nodes:new Set(Object.keys(NODES)), broken:new Set(), sel:F, path:null, preview:null, checked:false, cw:false}; }
-const out = (s, p) => S.facts.filter(f => f.s === s && f.p === p).map(f => f.o);
-const has = (s, p, o) => S.facts.some(f => f.s === s && f.p === p && f.o === o);
-const typeOf = id => NODES[id]?.t || (id.endsWith('-SAT') ? 'SAT' : null);
-const del = (s, p, o) => { S.facts = S.facts.filter(f => !(f.s === s && f.p === p && f.o === o)); };
-const add = (s, p, o, pv) => { if (!has(s, p, o)) S.facts.push({s, p, o, pv}); };
-
-/* ---------- checks (computed from the current facts) ---------- */
-function runChecks() {
-  const res = [];
-  const pts = S.nodes.has(F) ? out(F, 'hasPoint') : [];
-  const rat = pts.some(p => S.nodes.has(p) && typeOf(p) === 'RAT');
-  res.push({id:'C1', name:'It has a return air temperature point', ok:rat,
-    why:'Without it, nobody can tell from the graph how warm the room air is. In real handovers this happens when a sensor is left out of the data.'});
-  const room = out(F, 'locatedIn').find(r => typeOf(r) === 'Office');
-  res.push({id:'C2', name:'It is installed in a room', ok:!!room,
-    why:'Without a room, the graph cannot say whose comfort depends on this unit or where a technician should go.'});
-  const zones = out(F, 'feeds').filter(z => typeOf(z) === 'Zone');
-  let ok3 = true, why3 = '';
-  if (!room) { ok3 = true; why3 = ''; }
-  else if (!zones.length) { ok3 = false; why3 = 'It supplies no zone at all.'; }
-  else if (!zones.every(z => has(z, 'contains', room))) { ok3 = false; why3 = `It supplies ${zones[0]}, but that zone does not contain ${room}, where the unit is installed. A “which rooms get hot?” query would return the wrong room.`; }
-  res.push({id:'C3', name:'The zone it supplies contains its room', ok:ok3, why:why3, skipped:!room});
-  return res;
-}
-
-/* ---------- repairs (from drawing evidence) ---------- */
-function proposal() {
-  const c = runChecks().find(r => !r.ok);
-  if (!c) return null;
-  if (c.id === 'C1') return {c, evidence:'The DFE control drawing shows AI×1, a return air temperature sensor, for this unit.',
-    adds:[[F, 'hasPoint', 'FCU-6F-10-RAT'], ['FCU-6F-10-RAT', 'hostedBy', 'DFE-6F-10']], dels:[], node:'FCU-6F-10-RAT'};
-  if (c.id === 'C2') return {c, evidence:'The HVAC plan places the unit in R6-08 once it is aligned with the architectural plan.',
-    adds:[[F, 'locatedIn', 'R6-08']], dels:out(F, 'locatedIn').filter(r => r !== 'R6-08').map(r => [F, 'locatedIn', r])};
-  return {c, evidence:'The baseline records that the unit supplies Z-R6-08, and that zone contains R6-08.',
-    adds:[[F, 'feeds', 'Z-R6-08']], dels:out(F, 'feeds').filter(z => z !== 'Z-R6-08').map(z => [F, 'feeds', z])};
-}
-
-/* ---------- drawing ---------- */
-const svg = $('#g'), NS = 'http://www.w3.org/2000/svg';
-const el = (t, a, p) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
-function hex(r) { let d = ''; for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i + Math.PI / 6; d += (i ? 'L' : 'M') + (r * Math.cos(a)).toFixed(1) + ',' + (r * Math.sin(a)).toFixed(1); } return d + 'Z'; }
-function pos(id) { if (NODES[id]) return NODES[id]; if (id.endsWith('-SAT')) return {x:520, y:420}; return {x:450, y:240}; }
-function draw() {
-  svg.innerHTML = '';
-  const defs = el('defs', {}, svg);
-  for (const [n, c] of [['a', '#8695a9'], ['r', 'var(--bad)'], ['k', 'var(--ok)'], ['t', 'var(--teal)'], ['y', 'var(--amber)']]) {
-    const m = el('marker', {id:'m' + n, viewBox:'0 0 10 10', refX:9, refY:5, markerWidth:7, markerHeight:7, orient:'auto-start-reverse'}, defs);
-    el('path', {d:'M0,0 L10,5 L0,10 z', style:'fill:' + c}, m);
-  }
-  const cur = new Set(S.facts.map(key));
-  const edges = S.facts.map(f => ({f, k:BASEKEYS.has(key(f)) ? (f.fixed ? 'fixed' : '') : (f.pv === 'repair' ? 'fixed' : 'wrong')}));
-  for (const f of BASE) if (!cur.has(key(f))) edges.push({f, k:'removed'});
-  if (S.preview) for (const [s, p, o] of S.preview.adds) if (!has(s, p, o)) edges.push({f:{s, p, o}, k:'preview'});
-  const pathKeys = new Set(S.path || []);
-  const ge = el('g', {}, svg), gl = el('g', {}, svg), gn = el('g', {}, svg);
-  for (const {f, k} of edges) {
-    const a = pos(f.s), b = pos(f.o);
-    const ga = TYPES[typeOf(f.s)]?.g || 'point', gb = TYPES[typeOf(f.o)]?.g || 'point';
-    const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
-    const x1 = a.x + ux * (R[ga] + 2), y1 = a.y + uy * (R[ga] + 2), x2 = b.x - ux * (R[gb] + 6), y2 = b.y - uy * (R[gb] + 6);
-    let cls = 'e', mk = 'ma', lab = REL[f.p];
-    if (k === 'removed') { cls += ' removed'; mk = 'mr'; lab = '✕ removed'; }
-    else if (k === 'wrong') { cls += ' wrong'; mk = 'mr'; lab = '! ' + lab; }
-    else if (k === 'fixed') { cls += ' fixed'; mk = 'mk'; lab = '✓ ' + lab; }
-    else if (k === 'preview') { cls += ' preview'; mk = 'mt'; lab = '+ proposed'; }
-    else if (pathKeys.has(key(f))) { cls += ' path'; mk = 'my'; }
-    el('line', {x1, y1, x2, y2, class:cls, 'marker-end':`url(#${mk})`}, ge);
-    const t = el('text', {x:(x1 + x2) / 2, y:(y1 + y2) / 2 - 5, class:'el ' + (k || '')}, gl); t.textContent = lab;
-  }
-  const ids = new Set([...S.nodes, ...Object.keys(NODES)]);
-  if (S.preview && S.preview.node) ids.add(S.preview.node);
-  for (const id of ids) {
-    const live = S.nodes.has(id), t = typeOf(id); if (!t) continue;
-    const g = TYPES[t].g, [c, soft] = COLORS[g], p = pos(id);
-    const isPreview = !live && S.preview && S.preview.node === id;
-    let cls = 'nd' + (NODES[id]?.id !== 'pdf' ? ' illus' : '') + (id === S.sel ? ' sel' : '') + (!live && !isPreview ? ' gone' : '') + (isPreview ? ' new' : '');
-    if (S.pathNodes && S.pathNodes.has(id)) cls += ' on-path';
-    const n = el('g', {class:cls, transform:`translate(${p.x},${p.y})`, tabindex:0, role:'button', 'aria-label':`${id}, ${TYPES[t].label}${live ? '' : ', removed'}`}, gn);
-    el('circle', {r:R[g] + 6, class:'ring'}, n);
-    const st = `fill:var(${soft});stroke:var(${c})`;
-    let sh;
-    if (g === 'equip') sh = el('rect', {x:-17, y:-17, width:34, height:34, rx:6}, n);
-    else if (g === 'zone') sh = el('path', {d:'M0,-23 L23,0 L0,23 L-23,0Z'}, n);
-    else if (g === 'ctrl') sh = el('path', {d:hex(19)}, n);
-    else sh = el('circle', {r:R[g]}, n);
-    sh.setAttribute('class', 'sh'); sh.setAttribute('style', st);
-    const gt = el('text', {class:'gl'}, n); gt.textContent = TYPES[t].gl; gt.style.fill = `var(${c})`;
-    const lb = el('text', {class:'lb', y:R[g] + 16}, n); lb.textContent = id;
-    let badge = null;
-    if (!live && !isPreview) badge = ['var(--bad)', '✕'];
-    else if (id === F && S.checked && runChecks().some(r => !r.ok)) badge = ['var(--bad)', '!'];
-    if (badge) { const b = el('g', {class:'bdg', transform:`translate(${R[g] - 2},${-R[g] + 2})`}, n); el('circle', {r:8, style:'fill:' + badge[0]}, b); el('text', {}, b).textContent = badge[1]; }
-    const pick = () => { S.sel = id; draw(); info(); };
-    n.addEventListener('click', pick);
-    n.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
-  }
-}
-function info() {
-  const id = S.sel, t = typeOf(id), live = S.nodes.has(id), N = NODES[id] || {};
-  const idTag = N.id === 'pdf' ? '<span class="tag drawn">documented name</span>' : '<span class="tag illus">illustrative name</span>';
-  let h = `<h3>${esc(id)}</h3><p class="t">${esc(TYPES[t]?.label || '')} ${idTag}${live ? '' : ' <span class="tag wrong">removed from the graph</span>'}</p><ul class="facts">`;
-  for (const [txt, pv, why] of N.props || []) h += `<li${live ? '' : ' class="gone"'}><span>${esc(txt)}</span>${tag(pv)}${why ? `<span class="hint">${esc(why)}</span>` : ''}</li>`;
-  const rels = S.facts.filter(f => f.s === id || f.o === id);
-  for (const f of rels) h += `<li><span class="mono" style="font-size:13px">${esc(f.s)} → ${REL[f.p]} → ${esc(f.o)}</span>${BASEKEYS.has(key(f)) ? (f.fixed ? tag('fixed') : tag(f.pv)) : tag(f.pv === 'repair' ? 'fixed' : 'wrong')}</li>`;
-  for (const f of BASE) if ((f.s === id || f.o === id) && !has(f.s, f.p, f.o)) h += `<li class="gone"><span class="mono" style="font-size:13px">${esc(f.s)} → ${REL[f.p]} → ${esc(f.o)}</span><span class="tag wrong">removed</span></li>`;
-  h += '</ul>';
-  $('#info').innerHTML = h;
-}
-function tag(pv) { return {drawn:'<span class="tag drawn">drawn</span>', inferred:'<span class="tag inferred">inferred</span>', illus:'<span class="tag illus">illustrative</span>', fixed:'<span class="tag fixed">✓ repaired</span>', wrong:'<span class="tag wrong">! wrong</span>'}[pv] || ''; }
-function render() { draw(); info(); syncButtons(); }
-function syncButtons() {
-  document.querySelectorAll('[data-d]').forEach(b => { const on = S.broken.has(b.dataset.d); b.setAttribute('aria-pressed', on); b.disabled = on || S.cw; });
-  $('#cw').disabled = S.cw || S.broken.size > 0;
-}
-
-/* ---------- step 2: trip ---------- */
-$('#trip').addEventListener('click', async () => {
-  const b = $('#trip'); b.disabled = true;
-  const units = out('CH-1', 'feeds').filter(u => typeOf(u) === 'FCU' && S.nodes.has(u));
-  const zones = [...new Set(units.flatMap(u => out(u, 'feeds').filter(z => typeOf(z) === 'Zone')))];
-  const rooms = [...new Set(zones.flatMap(z => out(z, 'contains')))];
-  const lv = [[['CH-1'], []], [units, units.map(u => 'CH-1|feeds|' + u)], [zones, units.flatMap(u => out(u, 'feeds').map(z => u + '|feeds|' + z))], [rooms, zones.flatMap(z => out(z, 'contains').map(r => z + '|contains|' + r))]];
-  S.path = []; S.pathNodes = new Set();
-  for (const [ns, es] of lv) { ns.forEach(n => S.pathNodes.add(n)); S.path.push(...es); draw(); await wait(550); }
-  const names = rooms.map(r => `${r} (${ROOMNAME[r] || 'room'})`);
-  const changed = S.facts.some(f => !BASEKEYS.has(key(f))) || BASE.some(f => !has(f.s, f.p, f.o));
-  $('#tripOut').hidden = false;
-  $('#tripOut').innerHTML = `<div class="result demo"><span>In this small demo graph, CH-1 reaches <b class="big">${rooms.length}</b> room${rooms.length === 1 ? '' : 's'}: ${names.length ? esc(names.join(', ')) : 'none'}.</span>${changed ? '<span>The graph has been changed in step 3 or 6, so this answer follows the changed graph.</span>' : ''}</div>
-    <div class="result pdf"><span>On the full 6F graph the same query returns <b class="big">13</b> rooms: 7 faculty offices, 2 graduate student rooms, 2 academic exchange rooms, 1 laboratory and a lounge. The data room is not on the list; it has its own cooling system.</span></div>
-    <p class="note warn">These rooms <b>may</b> be affected. FCU-6F-10 also gets chilled water from CH-2, so a link in the graph does not prove a room loses cooling.</p>`;
-  b.disabled = false; b.textContent = 'Run again';
-});
-function clearTrip() { S.path = null; S.pathNodes = null; $('#tripOut').hidden = true; $('#trip').textContent = 'Trip CH-1'; }
-
-/* ---------- step 3: break ---------- */
-document.querySelectorAll('[data-d]').forEach(b => b.addEventListener('click', () => {
-  const d = b.dataset.d;
-  if (d === 'D1') { S.nodes.delete('FCU-6F-10-RAT'); S.facts = S.facts.filter(f => f.s !== 'FCU-6F-10-RAT' && f.o !== 'FCU-6F-10-RAT'); }
-  if (d === 'D2') for (const r of out(F, 'locatedIn')) del(F, 'locatedIn', r);
-  if (d === 'D3') for (const z of out(F, 'feeds')) { del(F, 'feeds', z); add(F, 'feeds', 'Z-R6-07', 'defect'); }
-  S.broken.add(d); S.sel = F; S.checked = false; S.preview = null; clearTrip(); $('#checks').hidden = true; $('#prop').innerHTML = '';
-  render();
-}));
-
-/* ---------- step 4: check ---------- */
-function showChecks() {
-  const res = runChecks(); S.checked = true;
-  const ul = $('#checks'); ul.hidden = false;
-  ul.innerHTML = res.map(r => r.skipped ? `<li class="skip"><span class="s">–</span><span><b>${r.name}</b><small>Not checked yet: the unit has no room (see the rule above).</small></span></li>`
-    : `<li class="${r.ok ? 'pass' : 'fail'}"><span class="s">${r.ok ? '✓' : '✕'}</span><span><b>${r.name}</b>${r.ok ? '' : `<small>${esc(r.why)}</small>`}</span></li>`).join('');
-  draw();
-  return res;
-}
-$('#check').addEventListener('click', showChecks);
-
-/* ---------- step 5: repair ---------- */
-function showProposal() {
-  const P = proposal(); S.preview = P;
-  const box = $('#prop');
-  if (!P) {
-    box.innerHTML = `<p class="note">${S.cw ? 'All three rules pass, so there is nothing to repair, even though the graph is wrong (see step 6).' : 'All three rules pass. Nothing to repair.'}</p>`;
-    render(); return;
-  }
-  box.innerHTML = `<div class="proposal"><span><b>Failed rule:</b> ${esc(P.c.name)}</span><span><b>Evidence:</b> ${esc(P.evidence)}</span>
-    <div class="diff">${P.dels.map(([s, p, o]) => `<span class="m">− ${esc(s)} → ${REL[p]} → ${esc(o)}</span>`).join('')}${P.adds.map(([s, p, o]) => `<span class="p">+ ${esc(s)} → ${REL[p]} → ${esc(o)}</span>`).join('')}</div>
-    <div class="btns"><button class="btn ok" type="button" id="approve">✓ Approve</button><button class="btn no" type="button" id="reject">✕ Reject</button></div></div>`;
-  $('#approve').addEventListener('click', () => {
-    if (P.node) S.nodes.add(P.node);
-    for (const [s, p, o] of P.dels) del(s, p, o);
-    for (const [s, p, o] of P.adds) { const pv = BASE.find(f => f.s === s && f.p === p && f.o === o)?.pv || 'drawn'; add(s, p, o, pv); S.facts.find(f => f.s === s && f.p === p && f.o === o).fixed = true; }
-    S.broken.delete({C1:'D1', C2:'D2', C3:'D3'}[P.c.id]);
-    S.preview = null; render();
-    const res = showChecks();
-    const left = res.filter(r => !r.ok).length;
-    box.innerHTML = `<p class="note">Applied and checked again: ${left ? left + ' rule' + (left > 1 ? 's' : '') + ' still failing. Press “Suggest a repair” for the next one.' : 'all three rules pass.'} Green lines show what was repaired.</p>`;
+/* ---------------- connections view ---------------- */
+function connSvg(id, issueKey) {
+  const e = D.EQ[id], r = issueKey ? D.R[issueKey] : null, I = issueKey ? D.IS[issueKey] : null;
+  const links = e.links.map(l => ({rel:l[0], to:l[1], kind: I && r.status === 'approved' && l[0] === I.newLink[0] && l[1] === I.newLink[1] ? 'new' : ''}));
+  if (I && r.status === 'open') links.push({rel:I.newLink[0], to:I.newLink[1], kind:'prop'});
+  const h = Math.max(140, links.length * 50 + 30), cy = h / 2;
+  let s = `<svg viewBox="0 0 640 ${h}" role="img" aria-label="Connections of ${id}">`;
+  links.forEach((l, i) => {
+    const y = 30 + i * 50 + 10;
+    s += `<path class="cl ${l.kind}" d="M170 ${cy} C 260 ${cy}, 300 ${y}, 420 ${y}"/>`;
+    s += `<text class="clt ${l.kind}" x="300" y="${(cy + y) / 2 - 6}" text-anchor="middle">${esc(l.rel)}${l.kind === 'prop' ? ' (proposed)' : l.kind === 'new' ? ' ✓' : ''}</text>`;
+    s += `<g class="cn"><rect x="420" y="${y - 16}" width="200" height="32" rx="6"${l.kind === 'prop' ? ' style="stroke:var(--teal);stroke-dasharray:5 3"' : l.kind === 'new' ? ' style="stroke:var(--ok);stroke-width:2"' : ''}/><text x="520" y="${y}">${esc(l.to.length > 26 ? l.to.slice(0, 25) + '…' : l.to)}</text></g>`;
   });
-  $('#reject').addEventListener('click', () => { S.preview = null; render(); box.innerHTML = '<p class="note warn">Rejected. The graph was not changed. In the real workflow the problem would go to a human reviewer.</p>'; });
-  render();
+  s += `<g class="cn center"><rect x="20" y="${cy - 20}" width="150" height="40" rx="8"/><text x="95" y="${cy}">${esc(id)}</text></g></svg>`;
+  return s;
 }
-$('#suggest').addEventListener('click', showProposal);
 
-/* ---------- step 6: consistent but wrong ---------- */
-$('#cw').addEventListener('click', () => {
-  del(F, 'locatedIn', 'R6-08'); add(F, 'locatedIn', 'R6-07', 'defect');
-  del(F, 'feeds', 'Z-R6-08'); add(F, 'feeds', 'Z-R6-07', 'defect');
-  S.cw = true; S.sel = F; S.preview = null; clearTrip(); $('#prop').innerHTML = '';
-  render(); const res = showChecks();
-  $('#cwOut').innerHTML = `<p class="note warn">${res.every(r => r.ok) ? 'All three rules pass' : 'Some rules fail'}, yet the drawings put FCU-6F-10 in R6-08. The rules only check that facts agree with each other. That is why the research keeps a clean baseline graph as an answer key. Press Reset to undo.</p>`;
+/* ---------------- render: thread ---------------- */
+function renderThread() {
+  const id = D.sel, e = D.EQ[id], k = e.issue, I = k ? D.IS[k] : null, r = k ? D.R[k] : null;
+  let h = '';
+  // 1. equipment
+  const locVal = e.location ? esc(e.location) + (k === 'loc' && r.status === 'approved' ? ` <span class="upd">${chip('approved')}<span class="small">${esc(r.trust)}</span></span>` : '') : '<span class="missing">⚠ Missing</span>';
+  const sensors = e.sensors.map((x, i) => esc(x) + (k === 'rat' && r.status === 'approved' && i === 0 ? ` <span class="upd">${chip('approved')}<span class="small">${esc(r.trust)}</span></span>` : '')).join('<br>');
+  const missingSensor = k === 'rat' && r.status !== 'approved' ? '<br><span class="missing">⚠ Return air temperature sensor missing</span>' : '';
+  const conns = e.links.filter(l => l[0] !== 'located in' && l[0] !== 'has sensor').map(l => `${esc(l[0][0].toUpperCase() + l[0].slice(1))} ${esc(l[1])}`).join('<br>');
+  h += `<section class="card" id="s1"><header><span class="n">1</span><h3>Equipment</h3><span class="sp"></span>${e.demo ? '<span class="chip c-demo">example data</span>' : '<span class="chip c-doc">from the 6F records</span>'}</header>
+    <div class="eqname">${esc(id)}</div>
+    <dl class="kv"><dt>Type</dt><dd>${esc(e.type)}</dd><dt>Location</dt><dd>${locVal}</dd><dt>Connected to</dt><dd>${conns || '—'}</dd><dt>Sensors and controls</dt><dd>${sensors}${missingSensor}</dd><dt>Information from</dt><dd>${esc(e.sources)}</dd></dl>
+    <div><button type="button" class="linkbtn" id="connBtn" aria-expanded="${D.showConn}">${D.showConn ? 'Hide connections' : 'Show connections'}</button></div>
+    ${D.showConn ? `<div class="conn">${connSvg(id, k)}</div><p class="hint">Optional view of the stored links. A dashed line is a proposed link that is not saved yet.</p>` : ''}
+  </section>`;
+  if (!I) {
+    h += `<section class="card" id="s2"><header><span class="n">2</span><h3>Problems</h3></header><p class="msg ok">No problems found. ${esc(id)} passes every rule check.</p><p class="hint">Pick an item marked “Needs review” in the list to try the review steps.</p></section>`;
+    $('#thread').innerHTML = h; bindThread(); return;
+  }
+  // 2. problem
+  const solved = r.status === 'approved';
+  h += `<section class="card problem ${solved ? 'solved' : ''}" id="s2"><header><span class="n">2</span><h3>Problem</h3><span class="sp"></span>${chip(r.status)}<span class="chip c-simu">found by rule check · simulated</span></header>
+    <p class="title">${esc(I.title)}</p><p>${esc(I.why)}</p>
+    <div class="rule"><b>Rule ${I.ruleId}:</b> ${esc(I.rule)}</div></section>`;
+  // 3. proposal
+  h += `<section class="card prop ${solved ? 'accepted' : ''}" id="s3"><header><span class="n">3</span><h3>Proposed correction</h3><span class="sp"></span><span class="chip c-simu">proposed by SGR · simulated</span></header>
+    <p class="small">${esc(I.proposal.label)}</p><p class="value">${solved ? '✓ ' : ''}${esc(I.proposal.value)}</p>
+    <p class="small">${esc(I.basis)} Checked before you saw it: the corrected record passes rule ${I.ruleId}.</p>
+    <div class="ev">${I.evidence.map(ev => `<div class="evi"><span><span class="k">${ev.kind}</span><br><b>${esc(ev.title)}</b></span><span class="chip ${ev.strength.startsWith('Direct') ? 'c-doc' : 'c-rej'}">${ev.strength}</span><p>${esc(ev.text)}</p>${ev.fig ? `<figure>${FIG[ev.fig]}</figure>` : ''}</div>`).join('')}</div>
+  </section>`;
+  // 4. question + decision
+  if (r.status === 'open') {
+    const a = r.answer;
+    const blocked = a === 'no';
+    h += `<section class="card ask" id="s4"><header><span class="n">4</span><h3>Your review</h3></header>
+      <p class="q">${esc(I.question)}</p>
+      <div class="answers" role="radiogroup" aria-label="Your answer">${Object.entries(I.answers).map(([key, lab]) => `<label class="${a === key ? 'sel' : ''}" for="ans-${key}"><input type="radio" name="ans" id="ans-${key}" value="${key}" ${a === key ? 'checked' : ''}>${esc(lab)}</label>`).join('')}</div>
+      ${blocked ? '<p class="msg warn">Your answer disagrees with the evidence, so this correction cannot be approved. Reject it or send it for investigation.</p>' : a === 'unknown' ? '<p class="msg info">That is fine. If you approve, the record will say this correction is based on the evidence shown and was not confirmed on site.</p>' : ''}
+      <label class="field" for="reason">Reason for your decision (saved with your name)
+        <textarea id="reason" placeholder="For example: matches the mechanical plan">${esc(r.reason)}</textarea></label>
+      <div class="quick">${I.reasons.map(q => `<button type="button" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+      <div class="decide">
+        <button class="btn ok" type="button" id="approve" ${!a || blocked || !r.reason.trim() || r.checking ? 'disabled' : ''}>${r.checking ? 'Checking the change…' : '✓ Approve correction'}</button>
+        <button class="btn no" type="button" id="reject" ${!a || !r.reason.trim() || r.checking ? 'disabled' : ''}>✕ Reject</button>
+        <button class="btn inv" type="button" id="investigate" ${r.checking ? 'disabled' : ''}>⚑ Request further investigation</button>
+      </div>
+      <p class="hint" id="whyDisabled">${!a ? 'Answer the question first. “I don’t know” is a valid answer.' : !r.reason.trim() && !blocked ? 'Add a short reason to approve or reject.' : ''}</p>
+      <ul class="rules"><li>Your answer is saved next to the evidence. On its own it does not make the correction trusted.</li><li>Approved changes are checked again by the system before they are saved.</li><li>“Request further investigation” changes nothing and creates a site check.</li></ul>
+    </section>`;
+  } else {
+    h += `<section class="card ask" id="s4"><header><span class="n">4</span><h3>Your review</h3><span class="sp"></span>${chip(r.status)}</header>
+      <dl class="kv"><dt>Question</dt><dd>${esc(I.question)}</dd><dt>Answer</dt><dd>${r.answer ? esc(I.answers[r.answer]) : 'Not answered'}</dd><dt>Decision</dt><dd>${STATUS[r.status][1]} by ${esc(r.decidedBy)}</dd><dt>Reason</dt><dd>${esc(r.reason || '—')}</dd></dl></section>`;
+  }
+  // 5. result + history
+  let res = '<p class="empty">No decision yet. The record has not changed.</p>';
+  if (r.status === 'approved') res = `<p class="result ok">✓ ${esc(I.result)}</p><p class="small">Approved by ${esc(r.decidedBy)}. ${esc(r.trust)}.</p>`;
+  if (r.status === 'rejected') res = `<p class="result rej">Correction not applied.</p><p class="small">The problem stays open. SGR would look for other evidence before proposing again (simulated).</p>`;
+  if (r.status === 'investigating') res = `<p class="result inv">⚑ Sent for a site check: work order ${r.wo}</p><p class="small">The record has not changed. The problem stays open until the check is done (simulated work order).</p>`;
+  h += `<section class="card" id="s5"><header><span class="n">5</span><h3>Result and history</h3></header>${res}
+    <ol class="hist">${r.history.slice().reverse().map(x => `<li><time>${x.t}</time><div><b>${esc(x.text)}</b><div class="by">${esc(x.by)}</div></div></li>`).join('')}</ol></section>`;
+  $('#thread').innerHTML = h;
+  bindThread();
+}
+function bindThread() {
+  const k = D.EQ[D.sel].issue, r = k ? D.R[k] : null;
+  const cb = $('#connBtn'); if (cb) cb.addEventListener('click', () => { D.showConn = !D.showConn; renderThread(); });
+  if (!r || r.status !== 'open') return;
+  document.querySelectorAll('input[name="ans"]').forEach(i => i.addEventListener('change', () => {
+    r.answer = i.value; renderAll(); }));
+  const ta = $('#reason');
+  ta.addEventListener('input', () => { r.reason = ta.value; updateButtons(); });
+  document.querySelectorAll('[data-q]').forEach(b => b.addEventListener('click', () => { r.reason = b.dataset.q; ta.value = r.reason; updateButtons(); }));
+  $('#approve').addEventListener('click', () => decide('approved'));
+  $('#reject').addEventListener('click', () => decide('rejected'));
+  $('#investigate').addEventListener('click', () => decide('investigating'));
+}
+function updateButtons() {
+  const k = D.EQ[D.sel].issue, r = D.R[k], a = r.answer, has = !!r.reason.trim();
+  $('#approve').disabled = !a || a === 'no' || !has;
+  $('#reject').disabled = !a || !has;
+  $('#whyDisabled').textContent = !a ? 'Answer the question first. “I don’t know” is a valid answer.' : !has && a !== 'no' ? 'Add a short reason to approve or reject.' : '';
+}
+const who = () => ($('#who').value || '').trim() || 'Demo operator';
+
+/* ---------------- decisions ---------------- */
+function decide(kind) {
+  const k = D.EQ[D.sel].issue, r = D.R[k], I = D.IS[k];
+  const logAnswer = () => { if (r.answer) r.history.push({t:now(), by:who(), text:`Answered: ${I.answers[r.answer]}.`}); };
+  if (kind === 'approved') {
+    if (!r.answer || r.answer === 'no' || !r.reason.trim()) return;
+    r.checking = true; renderThread();
+    setTimeout(() => {
+      r.checking = false; logAnswer();
+      I.apply(D.EQ[I.equip]);
+      r.status = 'approved'; r.decidedBy = who();
+      r.trust = r.answer === 'yes' ? 'Evidence: drawings and records, confirmed on site by the reviewer' : 'Evidence: drawings and records only, not confirmed on site';
+      r.history.push({t:now(), by:r.decidedBy, text:`Approved. Reason: ${r.reason.trim()}`});
+      r.history.push({t:now(), by:'System (simulated)', text:`Checked the change again: rule ${I.ruleId} passes. Record updated.`});
+      r.history.push({t:now(), by:'System (simulated)', text:'Saved who approved it, why, the answer given and the evidence used.'});
+      renderAll(); toast(I.result);
+    }, reduce ? 50 : 900);
+    return;
+  }
+  if (kind === 'rejected') {
+    if (!r.answer || !r.reason.trim()) return;
+    logAnswer(); r.status = 'rejected'; r.decidedBy = who();
+    r.history.push({t:now(), by:r.decidedBy, text:`Rejected. Reason: ${r.reason.trim()}`});
+    r.history.push({t:now(), by:'System (simulated)', text:'Correction not applied. The problem stays open.'});
+    renderAll(); toast('Correction rejected. Nothing was changed.'); return;
+  }
+  logAnswer(); r.status = 'investigating'; r.decidedBy = who(); r.wo = 'WO-' + (++woSeq);
+  r.history.push({t:now(), by:r.decidedBy, text:`Requested further investigation${r.reason.trim() ? '. Note: ' + r.reason.trim() : '.'}`});
+  r.history.push({t:now(), by:'System (simulated)', text:`Created work order ${r.wo} for a site check. Record not changed.`});
+  renderAll(); toast(`Work order ${r.wo} created (simulated).`);
+}
+
+/* ---------------- behind panel ---------------- */
+function renderBehind() {
+  const id = D.sel, e = D.EQ[id], k = e.issue, I = k ? D.IS[k] : null, r = k ? D.R[k] : null;
+  const step = (n, title, text, code, wait) => `<div class="bstep ${wait ? 'wait' : ''}"><i>${n}</i><div><b>${title}</b><p>${text}</p>${code ? `<pre>${esc(code)}</pre>` : ''}</div></div>`;
+  let h = '';
+  if (!I) {
+    h += step(1, 'Read the equipment from the knowledge graph', `Fetched ${esc(id)} and its links.`, `SELECT ?relation ?target WHERE {\n  ex:${id} ?relation ?target .\n}`);
+    h += step(2, 'Ran the rule checks', 'Every rule passes for this equipment. Nothing to propose.', 'Conforms: True');
+    $('#behindBody').innerHTML = h; return;
+  }
+  h += step(1, 'Read the equipment from the knowledge graph', 'The page shows these stored facts in plain language.', I.tech.query + '\n\n' + I.tech.rows);
+  h += step(2, `SHACL rule ${I.ruleId} found a violation`, 'The plain-language problem comes from the rule’s message.', I.tech.shape + '\n\n' + I.tech.report);
+  h += step(3, 'SGR proposed a patch and pre-checked it', 'In the real system an LLM writes this patch from the evidence. It is merged in a copy of the graph and validated before it reaches the reviewer.', I.tech.patch + '\n\nPre-check: Conforms: True');
+  if (r.status === 'open') {
+    h += step(4, 'Waiting for the reviewer', 'Review rules: an answer is required; an answer that contradicts the evidence blocks approval; approval and rejection need a reason.', '', true);
+    h += step(5, 'Nothing saved yet', 'The graph is unchanged until a correction is approved and passes validation again.', '', true);
+  } else if (r.status === 'approved') {
+    h += step(4, 'Review rules satisfied', `Answer: ${I.answers[r.answer]}. Reason given. Approved by ${r.decidedBy}.`, '');
+    h += step(5, 'Merged, validated again, recorded, synced', 'The patch was merged in RDF, validated again with the rule set, recorded with PROV-O, then written to the graph database.',
+      `${I.tech.fact} .\n\nex:change-${I.id} a prov:Activity ;\n  prov:wasAssociatedWith "${r.decidedBy}" ;\n  prov:used ex:evidence-drawing ;\n  ex:reviewerAnswer "${r.answer}" ;\n  ex:reason "${r.reason.trim().replace(/"/g, "'")}" .\n\nRevalidation: Conforms: True\nSync to Neo4j via n10s: done`);
+  } else if (r.status === 'rejected') {
+    h += step(4, 'Rejected by the reviewer', `Reason: ${r.reason.trim()}`, '');
+    h += step(5, 'Patch discarded', 'The graph is unchanged. The rejection is recorded so the next proposal can avoid the same answer.', `ex:review-${I.id} a prov:Activity ;\n  ex:outcome "rejected" ;\n  prov:wasAssociatedWith "${r.decidedBy}" .`);
+  } else {
+    h += step(4, 'Escalated to a person on site', 'The reviewer asked for more evidence before anything changes.', '');
+    h += step(5, 'Work order created', 'The graph is unchanged. A maintenance work order asks for a site check.', `CMMS work order ${r.wo}\n  equipment: ${id}\n  task: confirm ${I.field}\n  status: open`);
+  }
+  $('#behindBody').innerHTML = h;
+}
+
+/* ---------------- wiring ---------------- */
+function renderAll() { renderSteps(); renderList(); renderThread(); renderBehind(); }
+function select(id) {
+  if (!D.EQ[id]) return;
+  D.sel = id; D.showConn = false;
+  if (location.hash !== '#' + id) location.hash = id;
+  renderAll();
+}
+$('#toggleBehind').addEventListener('click', e => {
+  const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+  e.currentTarget.setAttribute('aria-pressed', on); $('#behind').hidden = !on; $('#grid').classList.toggle('nobehind', !on);
 });
-
-$('#unitReset').addEventListener('click', () => { fresh(); clearTrip(); $('#checks').hidden = true; $('#prop').innerHTML = ''; $('#cwOut').innerHTML = ''; render(); });
-
-fresh(); render();
-window.__lab = {get S() { return S; }, runChecks};
-})();
-</script>
-<script>
-(() => {
-'use strict';
-const $ = s => document.querySelector(s);
-const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const CTX = {"brick": "https://brickschema.org/schema/Brick#", "ex": "https://example.org/6f#"};
-const GOOD = {"@context": CTX,
-  "add": [{"@id": "ex:FCU-6F-10", "brick:hasPoint": {"@id": "ex:FCU-6F-10-RAT"}}, {"@id": "ex:FCU-6F-10-RAT", "@type": "brick:Return_Air_Temperature_Sensor"}],
-  "remove": [], "rationale": "The unit's controller has one analog input for return air temperature on the control drawing."};
-const BAD = {"@context": CTX,
-  "add": [{"@id": "ex:FCU-6F-10", "brick:hasPoint": {"@id": "ex:FCU-6F-10-SAT"}}, {"@id": "ex:FCU-6F-10-SAT", "@type": "brick:Supply_Air_Temperature_Sensor"}],
-  "remove": [], "rationale": "Adds an air temperature sensor, typed as supply air."};
-const MSG = 'Focus node: ex:FCU-6F-10\nPath: brick:hasPoint\nMessage: FCU lacks a return air temperature point';
-let CASE = 'first', steps = [], idx = -1, timer = null, lastPill = null, lastAttempt = 0, lastFb = null;
-
-function script(kase, K) {
-  const s = [], push = (node, edge, text, x = {}) => s.push({node, edge, text, ...x});
-  push('neo', null, 'Start from the current graph in Neo4j.');
-  push('export', 'neo-export', 'Export the graph to RDF with n10s.');
-  push('check', 'export-check', 'Validate with pySHACL (Brick 1.4.4 ontology, RDFS inference).');
-  if (kase === 'clean') {
-    push('viol', 'check-viol', 'Violations left? No.', {pill:['ok', 'Conforms'], fb:'ok'});
-    push('record', 'viol-record', 'Record PROV-O and sync to Neo4j via n10s.');
-    push('neo', 'record-neo', 'The next round starts from the updated graph.', {end:'ok'});
-    return s;
-  }
-  push('viol', 'check-viol', 'Violations left? Yes, 1 violation on FCU-6F-10.', {pill:['bad', '1 violation'], fb:'bad'});
-  let tries = 0;
-  for (;;) {
-    if (tries >= K) {
-      push('retry', 'viol-retry', `Retries below K? No (${tries} of ${K} used).`);
-      push('esc', 'retry-esc', 'Escalate to a reviewer; a CMMS work order is created. Neo4j is not changed.', {end:'bad'});
-      return s;
-    }
-    push('retry', 'viol-retry', `Retries below K? Yes (${tries} of ${K} used).`);
-    const passes = kase === 'first' ? tries === 0 : kase === 'retry' ? tries === 1 : false;
-    tries++;
-    push('llm', 'retry-llm', `Attempt ${tries}: the LLM reads the sh:message and proposes a JSON-LD patch.`, {patch:passes ? GOOD : BAD, attempt:tries});
-    push('merge', 'llm-merge', 'Merge the patch in RDF, not in Neo4j.');
-    push('check', 'merge-check', 'Revalidate the merged graph with pySHACL.');
-    if (passes) {
-      push('viol', 'check-viol', 'Violations left? No.', {pill:['ok', 'Conforms'], fb:'ok'});
-      push('record', 'viol-record', 'Record PROV-O for the accepted patch and sync the passing state to Neo4j via n10s.');
-      push('neo', 'record-neo', 'The next round starts from the updated graph.', {end:'ok'});
-      return s;
-    }
-    push('viol', 'check-viol', 'Violations left? Yes. A supply air sensor does not satisfy the rule.', {pill:['bad', 'Still 1 violation'], fb:'bad'});
-  }
-}
-const K = () => +$('#kSel').value;
-function setStatus(end) {
-  const p = lastPill ? `<span class="pill ${lastPill[0]}">${lastPill[0] === 'ok' ? '✓' : '✕'} ${lastPill[1]}</span>` : '<span class="pill idle">Not validated yet</span>';
-  const a = `<span class="pill idle">Attempts: ${lastAttempt} of ${K()}</span>`;
-  const e = end === 'ok' ? '<span class="pill ok">✓ Written to Neo4j</span>' : end === 'bad' ? '<span class="pill warn">⚑ Escalated, Neo4j unchanged</span>' : '';
-  $('#status').innerHTML = p + a + e;
-  const fb = $('#fb');
-  if (!lastFb) { fb.className = 'fb okk'; fb.textContent = 'No validation yet.'; }
-  else if (lastFb === 'ok') { fb.className = 'fb okk'; fb.textContent = 'Conforms: True\nNo violations, nothing to feed back.'; }
-  else { fb.className = 'fb'; fb.textContent = 'Conforms: False\n' + MSG; }
-  fb.style.whiteSpace = 'pre-wrap';
-}
-function reset() {
-  stop(); steps = script(CASE, K()); idx = -1; lastPill = null; lastAttempt = 0; lastFb = null;
-  document.querySelectorAll('.fn').forEach(n => n.classList.remove('on', 'done', 'end-ok', 'end-bad'));
-  document.querySelectorAll('.fe').forEach(e => { e.classList.remove('on', 'done'); e.setAttribute('marker-end', 'url(#ah)'); });
-  $('#log').innerHTML = ''; $('#patchOut').textContent = 'No patch proposed yet.';
-  setStatus(); sync();
-}
-function step() {
-  if (idx >= steps.length - 1) return false;
-  const st = steps[++idx];
-  document.querySelectorAll('.fn.on').forEach(n => { n.classList.remove('on'); n.classList.add('done'); });
-  document.querySelectorAll('.fe.on').forEach(e => { e.classList.remove('on'); e.classList.add('done'); e.setAttribute('marker-end', 'url(#ah)'); });
-  const n = $('#n-' + st.node); n.classList.remove('done'); n.classList.add('on');
-  if (st.edge) { const e = $('#e-' + st.edge); e.classList.remove('done'); e.classList.add('on'); e.setAttribute('marker-end', 'url(#ahOn)'); }
-  if (st.patch) $('#patchOut').textContent = JSON.stringify(st.patch, null, 2);
-  if (st.pill) lastPill = st.pill;
-  if (st.attempt) lastAttempt = st.attempt;
-  if (st.fb) lastFb = st.fb;
-  if (st.end) { n.classList.remove('on'); n.classList.add(st.end === 'ok' ? 'end-ok' : 'end-bad'); if (st.end === 'ok') $('#n-record').classList.add('end-ok'); }
-  setStatus(st.end);
-  const log = $('#log');
-  log.querySelectorAll('.cur').forEach(l => l.classList.remove('cur'));
-  const li = document.createElement('li'); li.className = 'cur';
-  li.innerHTML = `<i>${idx + 1}</i><span></span>`; li.lastChild.textContent = st.text;
-  log.appendChild(li); log.scrollTop = log.scrollHeight;
-  sync();
-  return idx < steps.length - 1;
-}
-function stop() { clearTimeout(timer); timer = null; }
-function play() {
-  if (idx >= steps.length - 1) reset();
-  stop();
-  const tick = () => { if (step()) timer = setTimeout(tick, reduce ? 300 : 1000); else { timer = null; sync(); } };
-  tick(); sync();
-}
-function sync() {
-  const end = idx >= steps.length - 1;
-  $('#loopStep').disabled = end;
-  $('#loopPlay').textContent = timer ? 'Pause' : end && idx >= 0 ? 'Play again' : 'Play';
-}
-$('#loopPlay').addEventListener('click', () => { if (timer) { stop(); sync(); } else play(); });
-$('#loopStep').addEventListener('click', () => { stop(); step(); });
-$('#loopReset').addEventListener('click', reset);
-$('#kSel').addEventListener('change', reset);
-document.querySelectorAll('[data-case]').forEach(b => b.addEventListener('click', () => {
-  CASE = b.dataset.case;
-  document.querySelectorAll('[data-case]').forEach(x => x.setAttribute('aria-pressed', x === b));
-  reset();
-}));
-// open in a finished state so the first view shows a complete run
-CASE = 'retry';
-document.querySelectorAll('[data-case]').forEach(x => x.setAttribute('aria-pressed', x.dataset.case === 'retry'));
-reset(); while (step()) {} sync();
+$('#resetDemo').addEventListener('click', () => { const keep = D.sel; D = freshData(); D.sel = keep; renderAll(); toast('Demo reset. All decisions cleared.'); });
+addEventListener('hashchange', () => { const id = location.hash.slice(1); if (D.EQ[id] && id !== D.sel) { D.sel = id; D.showConn = false; renderAll(); } });
+const start = location.hash.slice(1);
+if (D.EQ[start]) D.sel = start;
+renderAll();
+window.__review = {get D() { return D; }};
 })();
 </script>
 

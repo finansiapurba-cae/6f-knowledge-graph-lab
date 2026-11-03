@@ -1,22 +1,25 @@
-# Symbolic-Guided Regeneration (SGR)
+# SGR building information review
 
-Website for the SGR journal paper.
+A demonstration of how SGR (Symbolic-Guided Regeneration) helps facility operators govern changes to building information.
 
 Live site: https://finansiapurba-cae.github.io/6f-knowledge-graph-lab/
 
-When a large language model repairs or updates a building's knowledge graph, how do we make sure it does not make things up? SGR lets the model propose a patch, checks the patched graph against SHACL rules, and feeds every violation back until the graph passes or a reviewer takes over.
+The knowledge graph stores the building information; this website makes it understandable and lets an operator review each proposed correction before anything changes.
 
-## What is on the site
+## The review flow
 
-1. **Story:** a chiller trips; which rooms get hot? Why the answer depends on a correct graph, and why as-built drawings leave gaps.
-2. **Try it on one unit:** inject a defect into the graph around one fan coil unit, run SHACL-style validation, and approve or reject a repair.
-3. **The SGR loop:** step through the patch data flow: validate, propose a patch, revalidate, retry up to K, escalate or write back.
-4. **Answer key, pipeline, evaluation design, data and code availability.**
+| Step | What the operator sees or does | What happens behind the website |
+|---|---|---|
+| 1. Select equipment | Selects "AHU-02" | The equipment and its links are read from the knowledge graph |
+| 2. See a problem | "AHU-02 is missing its location." | A SHACL rule requiring a location reports a violation |
+| 3. Review a proposed correction | "Suggested location: Mechanical Room 01", with the drawing and record behind it | SGR proposes a patch from the evidence and pre-checks it |
+| 4. Make a decision | Answers a question ("I don't know" is allowed), then approves, rejects, or requests further investigation | Review rules apply: an answer that contradicts the evidence blocks approval, and a reason is required |
+| 5. See the result | "Location updated", with who approved it and why | The change is validated again, recorded with provenance, and saved; a site check becomes a work order |
 
-The paper's title, authors, abstract, results and citation will be added from the paper.
+An operator's answer alone never makes a correction trusted. An optional view shows the stored connections (for example AHU-02 supplies air to VAV-03), and a "What the system does" panel shows the SHACL rule, the patch and the provenance record for each step.
 
 ## Notes
 
 - `index.html` is the whole site in one file. No build step, no server, no API key.
-- The interactive parts are illustrations. They do not run an LLM, a SHACL engine or a database, and they report no experimental results.
-- The as-built drawings and the baseline graph are internal and are not part of this repository.
+- Rule checks, proposals, validation and work orders are simulated. No language model, SHACL engine or database runs, and nothing is sent anywhere.
+- AHU-02, VAV-03, Mechanical Room 01 and Room R6-12 are example data. FCU-6F-10, CH-1 and room R6-08 follow the documented 6F baseline graph.
